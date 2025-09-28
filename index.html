@@ -6,9 +6,105 @@
     <title>VivaLife Pharmacy Management System</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
+    <!-- Login Page -->
+    <div id="login-page" class="login-page">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <h1 class="system-name">PhMS</h1>
+                    <p class="system-subtitle">Pharmacy Management System</p>
+                </div>
+            </div>
+            
+            <div class="login-form-container">
+                <form id="login-form" class="login-form">
+                    <h2 id="login-title">Staff Login</h2>
+                    <p class="login-subtitle" id="login-subtitle">Please enter your credentials to access the system</p>
+                    
+                    <!-- Login Type Toggle -->
+                    <div class="login-type-toggle">
+                        <button type="button" class="toggle-btn active" id="staff-login-toggle">
+                            <i class="fas fa-user"></i> Staff Login
+                        </button>
+                        <button type="button" class="toggle-btn" id="admin-login-toggle">
+                            <i class="fas fa-shield-alt"></i> Admin Login
+                        </button>
+                    </div>
+                    
+                    <!-- Staff Login Fields -->
+                    <div id="staff-login-fields">
+                        <div class="form-group">
+                            <label for="login-staff-id">Staff ID</label>
+                            <div class="input-group">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="login-staff-id" placeholder="Enter your Staff ID" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <div class="input-group">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="login-password" placeholder="Enter your password" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-pharmacy">Pharmacy</label>
+                            <div class="input-group">
+                                <i class="fas fa-building"></i>
+                                <select id="login-pharmacy" required>
+                                    <option value="">Select Pharmacy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Admin Login Fields -->
+                    <div id="admin-login-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="login-admin-username">Admin Username</label>
+                            <div class="input-group">
+                                <i class="fas fa-user-shield"></i>
+                                <input type="text" id="login-admin-username" placeholder="Enter admin username" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-admin-password">Admin Password</label>
+                            <div class="input-group">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="login-admin-password" placeholder="Enter admin password" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="login-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login to System
+                    </button>
+                    
+                    <div id="login-error" class="error-message" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="login-error-text">Invalid credentials. Please try again.</span>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="login-footer">
+                <p>&copy; 2024 VivaLife Pharmacy Management System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="main-app" class="app-container" style="display: none;">
         <!-- Header -->
         <header class="header">
             <div class="header-content">
@@ -38,6 +134,14 @@
                     <i class="fas fa-prescription-bottle-alt"></i>
                     <span>Dispensing</span>
                 </li>
+                <li class="nav-item" data-section="returns">
+                    <i class="fas fa-undo"></i>
+                    <span>Returns</span>
+                </li>
+                <li class="nav-item" data-section="rsd-tracking">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>RSD Tracking</span>
+                </li>
                 <li class="nav-item" data-section="staff">
                     <i class="fas fa-users"></i>
                     <span>Staff Management</span>
@@ -45,6 +149,10 @@
                 <li class="nav-item" data-section="reports">
                     <i class="fas fa-chart-bar"></i>
                     <span>Reports</span>
+                </li>
+                <li class="nav-item" data-section="admin">
+                    <i class="fas fa-cogs"></i>
+                    <span>Admin</span>
                 </li>
             </ul>
         </nav>
@@ -56,6 +164,10 @@
                 <div class="section-header">
                     <h2>Dashboard</h2>
                     <p>Overview of pharmacy operations</p>
+                    <div id="dashboard-pharmacy-info" class="pharmacy-indicator">
+                        <i class="fas fa-building"></i>
+                        <span id="current-pharmacy-name">Loading...</span>
+                    </div>
                 </div>
                 
                 <div class="dashboard-grid">
@@ -131,10 +243,24 @@
                     <div class="filter-controls">
                         <select id="category-filter">
                             <option value="">All Categories</option>
-                            <option value="prescription">Prescription</option>
-                            <option value="otc">Over-the-Counter</option>
-                            <option value="supplies">Medical Supplies</option>
+                            <option value="medicines">Medicines</option>
+                            <option value="cosmetics">Cosmetics</option>
+                            <option value="diaber">Diaber</option>
+                            <option value="milk">Milk</option>
+                            <option value="refrigerated">Refrigerated Items</option>
                         </select>
+                    </div>
+                    <div class="excel-controls">
+                        <button id="download-template-btn" class="btn btn-outline">
+                            <i class="fas fa-download"></i> Download Template
+                        </button>
+                        <label for="excel-upload" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload Excel
+                            <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display: none;">
+                        </label>
+                        <button id="export-inventory-btn" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export Inventory
+                        </button>
                     </div>
                 </div>
 
@@ -145,6 +271,7 @@
                                 <th>Product Name</th>
                                 <th>Category</th>
                                 <th>SKU</th>
+                                <th>Batch Number</th>
                                 <th>Current Stock</th>
                                 <th>Min Stock</th>
                                 <th>Unit Price</th>
@@ -188,9 +315,347 @@
                         <div class="cart-total">
                             <div class="total-info">
                                 <span>Total Items: <span id="cart-count">0</span></span>
-                                <span>Total Value: $<span id="cart-total">0.00</span></span>
+                                <span>Total Value: <span id="cart-total">ر.س0.00</span></span>
                             </div>
-                            <button id="process-dispense" class="btn btn-success">Process Dispensing</button>
+                            <div class="cart-actions">
+                                <button id="preview-receipt-btn" class="btn btn-outline">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button id="print-receipt-btn" class="btn btn-outline">
+                                    <i class="fas fa-print"></i> Print Receipt
+                                </button>
+                                <button id="process-dispense" class="btn btn-success">Process Dispensing</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Returns Section -->
+            <section id="returns" class="content-section">
+                <div class="section-header">
+                    <h2>Medication Returns</h2>
+                    <p>Process returned medications and update inventory</p>
+                </div>
+
+                <div class="returns-container">
+                    <!-- Return Form -->
+                    <div class="return-form-section">
+                        <div class="form-card">
+                            <h3>Process Return</h3>
+                            <form id="return-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="return-search">Search Medication</label>
+                                        <div class="search-input-group">
+                                            <input type="text" id="return-search" placeholder="Enter medication name, SKU, or scan barcode">
+                                            <button type="button" id="return-scan-btn" class="btn btn-outline">
+                                                <i class="fas fa-barcode"></i> Scan
+                                            </button>
+                                        </div>
+                                        <div id="return-search-results" class="search-results"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="return-reason">Return Reason</label>
+                                        <select id="return-reason" required>
+                                            <option value="">Select reason</option>
+                                            <option value="expired">Expired</option>
+                                            <option value="damaged">Damaged</option>
+                                            <option value="wrong-medication">Wrong Medication</option>
+                                            <option value="patient-refused">Patient Refused</option>
+                                            <option value="overstock">Overstock</option>
+                                            <option value="recall">Product Recall</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="return-quantity">Quantity to Return</label>
+                                        <input type="number" id="return-quantity" min="1" required placeholder="Enter quantity">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="return-notes">Notes (Optional)</label>
+                                        <textarea id="return-notes" placeholder="Additional notes about the return"></textarea>
+                                    </div>
+                                </div>
+
+                            <div class="form-actions">
+                                <button type="button" id="add-return-item" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Add to Return List
+                                </button>
+                                <button type="button" id="clear-return-form" class="btn btn-outline">
+                                    <i class="fas fa-times"></i> Clear Form
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Product Invoices List -->
+                <div id="product-invoices-list" class="product-invoices-section" style="display: none;">
+                    <!-- Invoice list will be populated here -->
+                </div>
+
+                    <!-- Return Items List -->
+                    <div class="return-items-section">
+                        <div class="return-items-header">
+                            <h3>Return Items</h3>
+                            <div class="return-actions">
+                                <button id="process-returns" class="btn btn-success" disabled>
+                                    <i class="fas fa-check"></i> Process Returns
+                                </button>
+                                <button id="clear-return-list" class="btn btn-outline">
+                                    <i class="fas fa-trash"></i> Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div id="return-items-list" class="return-items-list">
+                            <div class="empty-state">
+                                <i class="fas fa-undo"></i>
+                                <p>No items added for return</p>
+                                <span>Search and add medications to process returns</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Return History -->
+                <div class="return-history-section">
+                    <div class="section-header">
+                        <h3>Recent Returns</h3>
+                        <div class="history-controls">
+                            <input type="date" id="return-date-filter" placeholder="Filter by date">
+                            <button id="refresh-returns" class="btn btn-outline">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div id="return-history-list" class="return-history-list">
+                        <!-- Return history will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- RSD Tracking & Trace Section -->
+            <section id="rsd-tracking" class="content-section">
+                <div class="section-header">
+                    <h2>RSD Tracking & Trace</h2>
+                    <p>SFDA RSD Integration for Drug Safety & Compliance</p>
+                    <div class="rsd-status-indicator">
+                        <i class="fas fa-circle"></i>
+                        <span id="rsd-connection-status">Connecting to SFDA RSD...</span>
+                    </div>
+                </div>
+
+                <!-- RSD Dashboard Overview -->
+                <div class="rsd-dashboard">
+                    <div class="rsd-kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <h3 id="total-scanned-boxes">0</h3>
+                                <p>Scanned Boxes</p>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <h3 id="active-recalls">0</h3>
+                                <p>Active Recalls</p>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon">
+                                <i class="fas fa-flag"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <h3 id="flagged-issues">0</h3>
+                                <p>Flagged Issues</p>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <h3 id="compliance-rate">0%</h3>
+                                <p>Compliance Rate</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RSD Charts -->
+                    <div class="rsd-charts-grid">
+                        <div class="chart-card">
+                            <h4>Dispensed vs Available Inventory</h4>
+                            <canvas id="rsd-inventory-chart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h4>Recall Trends (Last 30 Days)</h4>
+                            <canvas id="rsd-recall-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drug Lookup & Verification -->
+                <div class="rsd-lookup-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>Drug Lookup & Verification</h3>
+                            <p>Scan or enter 2D GS1 barcode for SFDA RSD verification</p>
+                        </div>
+                        
+                        <div class="lookup-form">
+                            <div class="barcode-input-group">
+                                <div class="input-group">
+                                    <i class="fas fa-barcode"></i>
+                                    <input type="text" id="barcode-input" placeholder="Scan or enter 2D GS1 barcode" autocomplete="off">
+                                    <button class="btn btn-primary" id="verify-barcode">
+                                        <i class="fas fa-search"></i> Verify
+                                    </button>
+                                </div>
+                                <div class="barcode-help">
+                                    <small>Scan the 2D GS1 barcode containing Expiry Date, Batch No., GTIN, Serial No.</small>
+                                </div>
+                            </div>
+                            
+                            <div id="verification-result" class="verification-result" style="display: none;">
+                                <div class="verification-header">
+                                    <h4>Verification Result</h4>
+                                    <div class="verification-status" id="verification-status">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Valid</span>
+                                    </div>
+                                </div>
+                                <div class="verification-details" id="verification-details">
+                                    <!-- Verification details will be populated here -->
+                                </div>
+                                <div class="verification-actions">
+                                    <button class="btn btn-outline" id="print-verification">
+                                        <i class="fas fa-print"></i> Print Report
+                                    </button>
+                                    <button class="btn btn-outline" id="export-verification">
+                                        <i class="fas fa-download"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recalls & Alerts -->
+                <div class="rsd-recalls-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>Recalls & Alerts</h3>
+                            <div class="recall-filters">
+                                <select id="recall-severity-filter">
+                                    <option value="all">All Severity Levels</option>
+                                    <option value="patient-level">Patient-Level Recall</option>
+                                    <option value="hospital-level">Hospital-Level Recall</option>
+                                    <option value="pharmacy-level">Pharmacy-Level Recall</option>
+                                </select>
+                                <button class="btn btn-outline" id="refresh-recalls">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="recalls-list" id="recalls-list">
+                            <!-- Recalls will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Monitoring -->
+                <div class="rsd-inventory-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>Inventory Monitoring</h3>
+                            <p>Track product movement and flag issues</p>
+                        </div>
+                        
+                        <div class="inventory-tabs">
+                            <button class="tab-btn active" data-tab="inventory-status">Status</button>
+                            <button class="tab-btn" data-tab="movement-history">Movement History</button>
+                            <button class="tab-btn" data-tab="shortage-alerts">Shortage Alerts</button>
+                        </div>
+                        
+                        <div class="inventory-content">
+                            <div id="inventory-status" class="tab-content active">
+                                <div class="inventory-grid" id="inventory-grid">
+                                    <!-- Inventory items will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <div id="movement-history" class="tab-content">
+                                <div class="movement-timeline" id="movement-timeline">
+                                    <!-- Movement history will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <div id="shortage-alerts" class="tab-content">
+                                <div class="alerts-list" id="shortage-alerts-list">
+                                    <!-- Shortage alerts will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reporting & Compliance -->
+                <div class="rsd-reporting-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>Reporting & Compliance</h3>
+                            <p>Generate RSD compliance reports and maintain audit trails</p>
+                        </div>
+                        
+                        <div class="reporting-actions">
+                            <div class="report-buttons">
+                                <button class="btn btn-primary" id="generate-rsd-report">
+                                    <i class="fas fa-file-alt"></i> Generate RSD Report
+                                </button>
+                                <button class="btn btn-outline" id="export-compliance-csv">
+                                    <i class="fas fa-file-csv"></i> Export CSV
+                                </button>
+                                <button class="btn btn-outline" id="export-compliance-pdf">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                </button>
+                                <button class="btn btn-outline" id="view-audit-trail">
+                                    <i class="fas fa-history"></i> Audit Trail
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="compliance-status">
+                            <h4>Compliance Status</h4>
+                            <div class="compliance-metrics">
+                                <div class="metric-item">
+                                    <span class="metric-label">Last RSD Submission:</span>
+                                    <span class="metric-value" id="last-rsd-submission">Never</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Pending Transactions:</span>
+                                    <span class="metric-value" id="pending-transactions">0</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">API Status:</span>
+                                    <span class="metric-value" id="api-status">Unknown</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -200,25 +665,73 @@
             <section id="staff" class="content-section">
                 <div class="section-header">
                     <h2>Staff Management</h2>
-                    <button id="add-staff-btn" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Add Staff
+                    <div class="header-actions">
+                        <button id="add-staff-btn" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Add Staff
+                        </button>
+                        <button id="refresh-staff-btn" class="btn btn-outline">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button id="card-view-btn" class="view-btn active">
+                        <i class="fas fa-th"></i> Card View
+                    </button>
+                    <button id="table-view-btn" class="view-btn">
+                        <i class="fas fa-table"></i> Table View
                     </button>
                 </div>
 
-                <div class="staff-grid">
-                    <div class="staff-card" id="staff-template" style="display: none;">
-                        <div class="staff-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="staff-info">
-                            <h3 class="staff-name">Staff Name</h3>
-                            <p class="staff-role">Role</p>
-                            <p class="staff-id">ID: 12345</p>
-                        </div>
-                        <div class="staff-actions">
-                            <button class="btn btn-sm btn-outline edit-staff">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-staff">Delete</button>
-                        </div>
+                <!-- Staff Template (Hidden) -->
+                <div class="staff-card" id="staff-template" style="display: none;">
+                    <div class="staff-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="staff-info">
+                        <h3 class="staff-name">Staff Name</h3>
+                        <p class="staff-role">Role</p>
+                        <p class="staff-privilege">Privilege Level</p>
+                        <p class="staff-pharmacy">Pharmacy</p>
+                        <p class="staff-password">Password Status</p>
+                        <p class="staff-id">ID: 12345</p>
+                    </div>
+                    <div class="staff-actions">
+                        <button class="btn btn-sm btn-outline edit-staff">Edit</button>
+                        <button class="btn btn-sm btn-danger delete-staff">Delete</button>
+                    </div>
+                </div>
+
+                <!-- Card View -->
+                <div id="staff-card-view" class="staff-view">
+                    <div class="staff-grid">
+                        <!-- Staff cards will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <div id="staff-table-view" class="staff-view" style="display: none;">
+                    <div class="staff-table-container">
+                        <table class="staff-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Privilege Level</th>
+                                    <th>Pharmacy</th>
+                                    <th>Staff ID</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Password</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-table-body">
+                                <!-- Staff table rows will be populated here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -233,17 +746,448 @@
                     <div class="report-card">
                         <h3>Inventory Report</h3>
                         <p>View stock levels and movement</p>
-                        <button class="btn btn-primary">Generate Report</button>
+                        <button class="btn btn-primary" id="generate-inventory-report">Generate Report</button>
                     </div>
                     <div class="report-card">
                         <h3>Dispensing Report</h3>
                         <p>Track dispensing activities</p>
-                        <button class="btn btn-primary">Generate Report</button>
+                        <button class="btn btn-primary" id="generate-dispensing-report">Generate Report</button>
                     </div>
                     <div class="report-card">
                         <h3>Staff Activity</h3>
                         <p>Monitor staff performance</p>
-                        <button class="btn btn-primary">Generate Report</button>
+                        <button class="btn btn-primary" id="generate-staff-report">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Returns Report</h3>
+                        <p>Track returned medications</p>
+                        <button class="btn btn-primary" id="generate-returns-report">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Favorite List Performance</h3>
+                        <p>Staff performance with high-profit products</p>
+                        <button class="btn btn-primary" id="generate-favorites-performance-report">Generate Report</button>
+                    </div>
+                </div>
+
+                <!-- Report Display Area -->
+                <div id="report-display" class="report-display" style="display: none;">
+                    <div class="report-header">
+                        <h3 id="report-title">Report Title</h3>
+                        <div class="report-actions">
+                            <button class="btn btn-outline" id="export-report-btn">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <button class="btn btn-outline" id="print-report-btn">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                            <button class="btn btn-outline" id="close-report-btn">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                    <div id="report-content" class="report-content">
+                        <!-- Report content will be generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Section -->
+            <section id="admin" class="content-section">
+                <div class="section-header">
+                    <h2>Pharmacy Administration</h2>
+                    <button id="add-pharmacy-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Pharmacy
+                    </button>
+                </div>
+
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="pharmacies">Pharmacies</button>
+                    <button class="tab-btn" data-tab="privileges">Privileges</button>
+                    <button class="tab-btn" data-tab="favorites">Favorite List</button>
+                    <button class="tab-btn" data-tab="agents">Agents</button>
+                    <button class="tab-btn" data-tab="system">System Settings</button>
+                    <button class="tab-btn" data-tab="backup">Backup & Restore</button>
+                </div>
+
+                <!-- Pharmacies Tab -->
+                <div id="pharmacies-tab" class="tab-content active">
+                    <div class="pharmacy-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="pharmacy-search" placeholder="Search pharmacies...">
+                        </div>
+                        <div class="filter-controls">
+                            <select id="pharmacy-status-filter">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pharmacy-grid">
+                        <div class="pharmacy-card" id="pharmacy-template" style="display: none;">
+                            <div class="pharmacy-header">
+                                <div class="pharmacy-logo">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div class="pharmacy-info">
+                                    <h3 class="pharmacy-name">Pharmacy Name</h3>
+                                    <p class="pharmacy-location">Location</p>
+                                    <p class="pharmacy-status">Status</p>
+                                </div>
+                                <div class="pharmacy-actions">
+                                    <button class="btn btn-sm btn-outline switch-pharmacy">Switch To</button>
+                                    <button class="btn btn-sm btn-outline edit-pharmacy">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-pharmacy">Delete</button>
+                                </div>
+                            </div>
+                            <div class="pharmacy-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Products</span>
+                                    <span class="stat-value">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Staff</span>
+                                    <span class="stat-value">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Last Activity</span>
+                                    <span class="stat-value">Never</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privileges Tab -->
+                <div id="privileges-tab" class="tab-content">
+                    <div class="privilege-header">
+                        <h3>Privilege Management</h3>
+                        <p>Manage staff privilege levels and their access permissions</p>
+                        <button id="add-privilege-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add New Privilege
+                        </button>
+                    </div>
+
+                    <!-- Privilege Summary -->
+                    <div class="privilege-summary" id="privilege-summary">
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-users-cog"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Total Privileges</h4>
+                                <p id="total-privileges">0</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>System Defaults</h4>
+                                <p id="default-privileges">0</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Custom Privileges</h4>
+                                <p id="custom-privileges">0</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-key"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Total Permissions</h4>
+                                <p id="total-permissions">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Privilege Controls -->
+                    <div class="privilege-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="privilege-search" placeholder="Search privileges...">
+                        </div>
+                        <div class="filter-controls">
+                            <select id="privilege-type-filter">
+                                <option value="">All Types</option>
+                                <option value="default">System Default</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="privilege-list">
+                        <!-- Privilege items will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <!-- Favorite List Tab -->
+                <div id="favorites-tab" class="tab-content">
+                    <div class="favorites-header">
+                        <h3>Favorite Products List</h3>
+                        <p>High-profitability products for staff incentive programs</p>
+                        <div class="favorites-controls">
+                            <button id="refresh-favorites-btn" class="btn btn-outline">
+                                <i class="fas fa-sync-alt"></i> Refresh List
+                            </button>
+                            <button id="export-favorites-btn" class="btn btn-outline">
+                                <i class="fas fa-download"></i> Export List
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Favorites Summary -->
+                    <div class="favorites-summary" id="favorites-summary">
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Total Favorites</h4>
+                                <p id="total-favorites">0</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Avg. Profit Margin</h4>
+                                <p id="avg-profit-margin">0%</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Total Value</h4>
+                                <p id="total-favorites-value">0.00</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>Top Category</h4>
+                                <p id="top-category">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Favorites Controls -->
+                    <div class="favorites-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="favorites-search" placeholder="Search favorite products...">
+                        </div>
+                        <div class="filter-controls">
+                            <select id="favorites-category-filter">
+                                <option value="">All Categories</option>
+                                <option value="medicines">Medicines</option>
+                                <option value="cosmetics">Cosmetics</option>
+                                <option value="diaber">Diaber</option>
+                                <option value="milk">Milk</option>
+                                <option value="refrigerated">Refrigerated</option>
+                            </select>
+                            <select id="favorites-sort">
+                                <option value="profit-margin">Sort by Profit Margin</option>
+                                <option value="price">Sort by Price</option>
+                                <option value="name">Sort by Name</option>
+                                <option value="category">Sort by Category</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Favorites List -->
+                    <div class="favorites-list" id="favorites-list">
+                        <!-- Favorite products will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <!-- Agents Tab -->
+                <div id="agents-tab" class="tab-content">
+                    <div class="section-header">
+                        <h3>Agents & Suppliers Management</h3>
+                        <p>Manage suppliers and agents who provide inventory to the pharmacy</p>
+                        <div class="header-actions">
+                            <button id="add-agent-btn" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Agent
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="agents-controls">
+                        <div class="search-controls">
+                            <div class="search-input-group">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="agent-search" placeholder="Search agents by name, company, or contact...">
+                            </div>
+                        </div>
+                        
+                        <div class="filter-controls">
+                            <select id="agent-status-filter">
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                            
+                            <select id="agent-type-filter">
+                                <option value="all">All Types</option>
+                                <option value="supplier">Supplier</option>
+                                <option value="distributor">Distributor</option>
+                                <option value="manufacturer">Manufacturer</option>
+                                <option value="agent">Agent</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="agents-summary">
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="total-agents">0</h4>
+                                <p>Total Agents</p>
+                            </div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="active-agents">0</h4>
+                                <p>Active Agents</p>
+                            </div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="supplier-agents">0</h4>
+                                <p>Suppliers</p>
+                            </div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <div class="summary-icon">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4 id="distributor-agents">0</h4>
+                                <p>Distributors</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agents-table-container">
+                        <table class="data-table" id="agents-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Company</th>
+                                    <th>Type</th>
+                                    <th>Contact</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Products</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agents-table-body">
+                                <!-- Agents will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System Settings Tab -->
+                <div id="system-tab" class="tab-content">
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <h3>Global Settings</h3>
+                            <div class="setting-item">
+                                <label>Default Currency</label>
+                                <select id="default-currency">
+                                    <option value="SAR">SAR (ر.س)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Date Format</label>
+                                <select id="date-format">
+                                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-card">
+                            <h3>Security Settings</h3>
+                            <div class="setting-item">
+                                <label>Session Timeout (minutes)</label>
+                                <input type="number" id="session-timeout" value="30" min="5" max="120">
+                            </div>
+                            <div class="setting-item">
+                                <label>Require Password Change</label>
+                                <input type="checkbox" id="require-password-change">
+                            </div>
+                        </div>
+                        <div class="setting-card">
+                            <h3>Admin Credentials</h3>
+                            <div class="setting-item">
+                                <label>Admin Username</label>
+                                <input type="text" id="admin-username-setting" placeholder="Enter admin username">
+                            </div>
+                            <div class="setting-item">
+                                <label>Admin Password</label>
+                                <input type="password" id="admin-password-setting" placeholder="Enter admin password">
+                            </div>
+                            <div class="setting-item">
+                                <button class="btn btn-primary" id="update-admin-credentials">
+                                    <i class="fas fa-save"></i> Update Admin Credentials
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup & Restore Tab -->
+                <div id="backup-tab" class="tab-content">
+                    <div class="backup-grid">
+                        <div class="backup-card">
+                            <h3>Data Backup</h3>
+                            <p>Create a backup of all pharmacy data</p>
+                            <button id="create-backup-btn" class="btn btn-primary">
+                                <i class="fas fa-download"></i> Create Backup
+                            </button>
+                        </div>
+                        <div class="backup-card">
+                            <h3>Restore Data</h3>
+                            <p>Restore from a previous backup</p>
+                            <label for="restore-file" class="btn btn-outline">
+                                <i class="fas fa-upload"></i> Restore Backup
+                                <input type="file" id="restore-file" accept=".json" style="display: none;">
+                            </label>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -266,14 +1210,25 @@
                     <div class="form-group">
                         <label for="product-category">Category</label>
                         <select id="product-category" required>
-                            <option value="prescription">Prescription</option>
-                            <option value="otc">Over-the-Counter</option>
-                            <option value="supplies">Medical Supplies</option>
+                            <option value="medicines">Medicines</option>
+                            <option value="cosmetics">Cosmetics</option>
+                            <option value="diaber">Diaber</option>
+                            <option value="milk">Milk</option>
+                            <option value="refrigerated">Refrigerated Items</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="product-sku">SKU/Barcode</label>
-                        <input type="text" id="product-sku" required>
+                        <div class="sku-input-group">
+                            <input type="text" id="product-sku" required>
+                            <button type="button" id="generate-sku-btn" class="btn btn-outline btn-sm">
+                                <i class="fas fa-sync-alt"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-batch">Batch Number</label>
+                        <input type="text" id="product-batch" placeholder="Enter batch number">
                     </div>
                     <div class="form-group">
                         <label for="product-stock">Current Stock</label>
@@ -315,10 +1270,27 @@
                     <div class="form-group">
                         <label for="staff-role">Role</label>
                         <select id="staff-role" required>
-                            <option value="pharmacist">Pharmacist</option>
-                            <option value="technician">Pharmacy Technician</option>
-                            <option value="assistant">Pharmacy Assistant</option>
+                            <option value="warehouse-assistant">Warehouse Assistant</option>
+                            <option value="pharmacy-staff">Pharmacy Staff</option>
+                            <option value="pharmacy-supervisor">Pharmacy Supervisor</option>
                             <option value="manager">Manager</option>
+                            <option value="data-entry">Data Entry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-privilege">Privilege Level</label>
+                        <select id="staff-privilege" required>
+                            <option value="warehouse-assistant">Warehouse Assistant</option>
+                            <option value="pharmacy-staff">Pharmacy Staff</option>
+                            <option value="pharmacy-supervisor">Pharmacy Supervisor</option>
+                            <option value="manager">Manager</option>
+                            <option value="data-entry">Data Entry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-pharmacy">Pharmacy</label>
+                        <select id="staff-pharmacy" required>
+                            <option value="">Select Pharmacy</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -327,11 +1299,16 @@
                     </div>
                     <div class="form-group">
                         <label for="staff-email">Email</label>
-                        <input type="email" id="staff-email" required>
+                        <input type="email" id="staff-email">
                     </div>
                     <div class="form-group">
                         <label for="staff-phone">Phone</label>
                         <input type="tel" id="staff-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-password">Password</label>
+                        <input type="password" id="staff-password" placeholder="Enter password">
+                        <small class="form-text">Password is required for staff login</small>
                     </div>
                 </form>
             </div>
@@ -342,7 +1319,276 @@
         </div>
     </div>
 
+    <div id="pharmacy-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add/Edit Pharmacy</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="pharmacy-form">
+                    <div class="form-group">
+                        <label for="pharmacy-name">Pharmacy Name</label>
+                        <input type="text" id="pharmacy-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pharmacy-address">Address</label>
+                        <textarea id="pharmacy-address" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="pharmacy-phone">Phone Number</label>
+                        <input type="tel" id="pharmacy-phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pharmacy-email">Email</label>
+                        <input type="email" id="pharmacy-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pharmacy-manager">Manager Name</label>
+                        <input type="text" id="pharmacy-manager" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pharmacy-status">Status</label>
+                        <select id="pharmacy-status" required>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-pharmacy">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-pharmacy">Save Pharmacy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Authentication Modal -->
+    <div id="admin-auth-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Admin Authentication Required</h3>
+                <span class="close" id="close-admin-auth">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>
+                    <strong style="color: #856404;">Warning:</strong> Deleting a pharmacy will permanently remove all associated data including products, staff, and dispensing history.
+                </div>
+                <form id="admin-auth-form">
+                    <div class="form-group">
+                        <label for="admin-username">Admin Username</label>
+                        <input type="text" id="admin-username" required placeholder="Enter admin username">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">Admin Password</label>
+                        <input type="password" id="admin-password" required placeholder="Enter admin password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-admin-auth">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-pharmacy">
+                    <i class="fas fa-trash"></i> Delete Pharmacy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privilege Modal -->
+    <div id="privilege-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="privilege-modal-title">Add New Privilege</h3>
+                <span class="close" id="close-privilege">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="privilege-form">
+                    <div class="form-group">
+                        <label for="privilege-name">Privilege Name</label>
+                        <input type="text" id="privilege-name" required placeholder="Enter privilege name">
+                    </div>
+                    <div class="form-group">
+                        <label for="privilege-description">Description</label>
+                        <textarea id="privilege-description" placeholder="Enter privilege description"></textarea>
+                    </div>
+                    
+                    <div class="permissions-section">
+                        <h4>Access Permissions</h4>
+                        
+                        <div class="permission-group">
+                            <h5>Inventory Access</h5>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-view-inventory">
+                                <span>View Inventory</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-add-products">
+                                <span>Add Products</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-edit-products">
+                                <span>Edit Products</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-delete-products">
+                                <span>Delete Products</span>
+                            </label>
+                        </div>
+                        
+                        <div class="permission-group">
+                            <h5>Dispensing Access</h5>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-process-dispensing">
+                                <span>Process Dispensing</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-view-dispensing-history">
+                                <span>View Dispensing History</span>
+                            </label>
+                        </div>
+                        
+                        <div class="permission-group">
+                            <h5>Returns Access</h5>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-process-returns">
+                                <span>Process Returns</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-view-returns-history">
+                                <span>View Returns History</span>
+                            </label>
+                        </div>
+                        
+                        <div class="permission-group">
+                            <h5>Reports Access</h5>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-view-reports">
+                                <span>View Reports</span>
+                            </label>
+                        </div>
+                        
+                        <div class="permission-group">
+                            <h5>Admin Access</h5>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-manage-pharmacies">
+                                <span>Manage Pharmacies</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-manage-staff">
+                                <span>Manage Staff</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" id="perm-system-settings">
+                                <span>System Settings</span>
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-privilege">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-privilege">Save Privilege</button>
+            </div>
+        </div>
+    </div>
+    </div> <!-- End of main-app -->
+
+    <!-- Agent Modal -->
+    <div id="agent-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="agent-modal-title">Add New Agent</h3>
+                <span class="close" id="close-agent-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="agent-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agent-name">Agent Name *</label>
+                            <input type="text" id="agent-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-company">Company Name *</label>
+                            <input type="text" id="agent-company" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agent-type">Agent Type *</label>
+                            <select id="agent-type" required>
+                                <option value="">Select Type</option>
+                                <option value="supplier">Supplier</option>
+                                <option value="distributor">Distributor</option>
+                                <option value="manufacturer">Manufacturer</option>
+                                <option value="agent">Agent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-status">Status *</label>
+                            <select id="agent-status" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agent-contact">Contact Person</label>
+                            <input type="text" id="agent-contact">
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-phone">Phone Number</label>
+                            <input type="tel" id="agent-phone">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agent-email">Email Address</label>
+                            <input type="email" id="agent-email">
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-website">Website</label>
+                            <input type="url" id="agent-website" placeholder="https://example.com">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agent-address">Address</label>
+                        <textarea id="agent-address" rows="3" placeholder="Full address including city, state, and postal code"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agent-tax-id">Tax ID / VAT Number</label>
+                            <input type="text" id="agent-tax-id">
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-license">License Number</label>
+                            <input type="text" id="agent-license">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agent-notes">Notes</label>
+                        <textarea id="agent-notes" rows="3" placeholder="Additional notes about this agent or supplier"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-agent">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-agent">Save Agent</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

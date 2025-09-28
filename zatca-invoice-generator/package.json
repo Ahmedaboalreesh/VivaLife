@@ -1,0 +1,46 @@
+{
+  "name": "zatca-e-invoice-generator",
+  "version": "1.0.0",
+  "description": "ZATCA-compliant e-invoice generator for Saudi Arabia with PDF generation, embedded XML, and QR codes",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -p 8000 -c-1",
+    "dev": "http-server -p 8000 -c-1 -o",
+    "build": "echo 'No build process required - static files only'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "zatca",
+    "e-invoice",
+    "saudi-arabia",
+    "pdf",
+    "xml",
+    "qr-code",
+    "ubl",
+    "tax-invoice",
+    "vat",
+    "compliance"
+  ],
+  "author": "ZATCA E-Invoice Generator",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/zatca-e-invoice-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/zatca-e-invoice-generator/issues"
+  },
+  "homepage": "https://github.com/your-username/zatca-e-invoice-generator#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

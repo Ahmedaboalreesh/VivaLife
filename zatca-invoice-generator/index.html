@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZATCA E-Invoice Generator | مولد الفواتير الإلكترونية</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-file-invoice"></i> ZATCA E-Invoice Generator</h1>
+                <h2>مولد الفواتير الإلكترونية</h2>
+                <p>ZATCA Compliant E-Invoice System | نظام الفواتير الإلكترونية المتوافق مع هيئة الزكاة</p>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="invoice-form">
+                <i class="fas fa-plus-circle"></i>
+                <span>Create Invoice</span>
+                <span>إنشاء فاتورة</span>
+            </button>
+            <button class="tab-btn" data-tab="invoice-list">
+                <i class="fas fa-list"></i>
+                <span>Invoice List</span>
+                <span>قائمة الفواتير</span>
+            </button>
+            <button class="tab-btn" data-tab="settings">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+                <span>الإعدادات</span>
+            </button>
+        </nav>
+
+        <!-- Invoice Form Tab -->
+        <div id="invoice-form" class="tab-content active">
+            <div class="form-container">
+                <form id="invoice-form-element" class="invoice-form">
+                    <!-- Invoice Type Selection -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-file-alt"></i> Invoice Type | نوع الفاتورة</h3>
+                        <div class="invoice-type-selection">
+                            <label class="radio-option">
+                                <input type="radio" name="invoiceType" value="B2B" checked>
+                                <span class="radio-custom"></span>
+                                <div class="option-content">
+                                    <strong>Tax Invoice (B2B)</strong>
+                                    <small>فاتورة ضريبية (بين الشركات)</small>
+                                </div>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="invoiceType" value="B2C">
+                                <span class="radio-custom"></span>
+                                <div class="option-content">
+                                    <strong>Simplified Tax Invoice (B2C)</strong>
+                                    <small>فاتورة ضريبية مبسطة (للمستهلكين)</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Seller Information -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-building"></i> Seller Information | معلومات البائع</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="sellerName">Seller Name | اسم البائع *</label>
+                                <input type="text" id="sellerName" name="sellerName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="sellerVAT">VAT Registration Number | رقم التسجيل الضريبي *</label>
+                                <input type="text" id="sellerVAT" name="sellerVAT" pattern="[0-9]{15}" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="sellerAddress">Address | العنوان *</label>
+                                <textarea id="sellerAddress" name="sellerAddress" rows="3" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Buyer Information (B2B only) -->
+                    <div class="form-section" id="buyer-section">
+                        <h3><i class="fas fa-user-tie"></i> Buyer Information | معلومات المشتري</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="buyerName">Buyer Name | اسم المشتري *</label>
+                                <input type="text" id="buyerName" name="buyerName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="buyerVAT">VAT Registration Number | رقم التسجيل الضريبي *</label>
+                                <input type="text" id="buyerVAT" name="buyerVAT" pattern="[0-9]{15}" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="buyerAddress">Address | العنوان *</label>
+                                <textarea id="buyerAddress" name="buyerAddress" rows="3" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Details -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-receipt"></i> Invoice Details | تفاصيل الفاتورة</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="invoiceNumber">Invoice Number | رقم الفاتورة</label>
+                                <input type="text" id="invoiceNumber" name="invoiceNumber" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="invoiceDate">Invoice Date | تاريخ الفاتورة</label>
+                                <input type="datetime-local" id="invoiceDate" name="invoiceDate" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Items -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-list-ul"></i> Line Items | عناصر الفاتورة</h3>
+                        <div class="line-items-container">
+                            <div class="line-items-header">
+                                <div class="col-description">Description | الوصف</div>
+                                <div class="col-qty">Qty | الكمية</div>
+                                <div class="col-price">Unit Price | سعر الوحدة</div>
+                                <div class="col-tax">Tax Rate | معدل الضريبة</div>
+                                <div class="col-total">Total | المجموع</div>
+                                <div class="col-actions">Actions | الإجراءات</div>
+                            </div>
+                            <div id="line-items-list" class="line-items-list">
+                                <!-- Line items will be added here dynamically -->
+                            </div>
+                            <button type="button" id="add-line-item" class="btn btn-outline">
+                                <i class="fas fa-plus"></i> Add Item | إضافة عنصر
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Totals -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-calculator"></i> Invoice Totals | إجماليات الفاتورة</h3>
+                        <div class="totals-container">
+                            <div class="total-line">
+                                <span>Subtotal (Before VAT) | المجموع الفرعي (قبل الضريبة)</span>
+                                <span id="subtotal">0.00 SAR</span>
+                            </div>
+                            <div class="total-line">
+                                <span>VAT Amount | مبلغ الضريبة</span>
+                                <span id="vat-amount">0.00 SAR</span>
+                            </div>
+                            <div class="total-line total-final">
+                                <span>Total (Including VAT) | المجموع (شامل الضريبة)</span>
+                                <span id="total-amount">0.00 SAR</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="form-actions">
+                        <button type="button" id="preview-invoice" class="btn btn-outline">
+                            <i class="fas fa-eye"></i> Preview | معاينة
+                        </button>
+                        <button type="button" id="generate-invoice" class="btn btn-primary">
+                            <i class="fas fa-file-pdf"></i> Generate Invoice | إنشاء الفاتورة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Invoice List Tab -->
+        <div id="invoice-list" class="tab-content">
+            <div class="list-container">
+                <div class="list-header">
+                    <h3><i class="fas fa-list"></i> Generated Invoices | الفواتير المُنشأة</h3>
+                    <div class="list-controls">
+                        <input type="text" id="search-invoices" placeholder="Search invoices... | البحث في الفواتير...">
+                        <select id="filter-type">
+                            <option value="">All Types | جميع الأنواع</option>
+                            <option value="B2B">B2B | بين الشركات</option>
+                            <option value="B2C">B2C | للمستهلكين</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="invoices-list" class="invoices-list">
+                    <!-- Invoices will be listed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="settings-container">
+                <h3><i class="fas fa-cog"></i> System Settings | إعدادات النظام</h3>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h4>Company Information | معلومات الشركة</h4>
+                        <div class="form-group">
+                            <label for="companyName">Company Name | اسم الشركة</label>
+                            <input type="text" id="companyName" name="companyName">
+                        </div>
+                        <div class="form-group">
+                            <label for="companyVAT">VAT Number | الرقم الضريبي</label>
+                            <input type="text" id="companyVAT" name="companyVAT">
+                        </div>
+                        <div class="form-group">
+                            <label for="companyAddress">Address | العنوان</label>
+                            <textarea id="companyAddress" name="companyAddress" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="setting-card">
+                        <h4>Invoice Settings | إعدادات الفاتورة</h4>
+                        <div class="form-group">
+                            <label for="invoicePrefix">Invoice Prefix | بادئة الفاتورة</label>
+                            <input type="text" id="invoicePrefix" name="invoicePrefix" value="INV">
+                        </div>
+                        <div class="form-group">
+                            <label for="vatRate">Default VAT Rate | معدل الضريبة الافتراضي</label>
+                            <input type="number" id="vatRate" name="vatRate" value="15" step="0.01" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="currency">Currency | العملة</label>
+                            <select id="currency" name="currency">
+                                <option value="SAR">SAR - Saudi Riyal</option>
+                                <option value="USD">USD - US Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-card">
+                        <h4>ZATCA Integration | تكامل هيئة الزكاة</h4>
+                        <div class="form-group">
+                            <label for="zatcaEndpoint">ZATCA Endpoint | نقطة النهاية</label>
+                            <input type="url" id="zatcaEndpoint" name="zatcaEndpoint" placeholder="https://api.zatca.gov.sa/">
+                        </div>
+                        <div class="form-group">
+                            <label for="zatcaAPIKey">API Key | مفتاح API</label>
+                            <input type="password" id="zatcaAPIKey" name="zatcaAPIKey">
+                        </div>
+                        <div class="form-group">
+                            <label for="zatcaSecret">Secret Key | المفتاح السري</label>
+                            <input type="password" id="zatcaSecret" name="zatcaSecret">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button id="save-settings" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Settings | حفظ الإعدادات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Preview Modal -->
+    <div id="invoice-preview-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Invoice Preview | معاينة الفاتورة</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="invoice-preview-content">
+                    <!-- Invoice preview will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-preview" class="btn btn-outline">Close | إغلاق</button>
+                <button id="generate-from-preview" class="btn btn-primary">Generate PDF | إنشاء PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="js/zatca-utils.js"></script>
+    <script src="js/invoice-generator.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
