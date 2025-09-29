@@ -158,6 +158,14 @@
                     <i class="fas fa-percentage"></i>
                     <span>Discounts & Offers</span>
                 </li>
+                <li class="nav-item" data-section="clinical-support">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>Clinical Support</span>
+                </li>
+                <li class="nav-item" data-section="attendance">
+                    <i class="fas fa-clock"></i>
+                    <span>Attendance</span>
+                </li>
                 <li class="nav-item" data-section="admin">
                     <i class="fas fa-cogs"></i>
                     <span>Admin</span>
@@ -216,6 +224,51 @@
                         <div class="stat-content">
                             <h3 id="active-staff">0</h3>
                             <p>Active Staff</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance Tracking Card -->
+                <div class="dashboard-attendance-section">
+                    <div class="attendance-card">
+                        <div class="attendance-header">
+                            <h3><i class="fas fa-clock"></i> Staff Attendance</h3>
+                            <div class="attendance-status" id="dashboard-attendance-status">
+                                <span class="status-indicator offline"></span>
+                                <span class="status-text">Not Clocked In</span>
+                            </div>
+                        </div>
+                        <div class="attendance-content">
+                            <div class="clock-display">
+                                <div class="current-time" id="dashboard-current-time">--:--:--</div>
+                                <div class="current-date" id="dashboard-current-date">-- --, ----</div>
+                            </div>
+                            <div class="clock-actions">
+                                <button id="dashboard-clock-in-btn" class="btn btn-success clock-btn">
+                                    <i class="fas fa-play"></i> Clock In
+                                </button>
+                                <button id="dashboard-clock-out-btn" class="btn btn-danger clock-btn" disabled>
+                                    <i class="fas fa-stop"></i> Clock Out
+                                </button>
+                            </div>
+                        <div class="attendance-summary" id="dashboard-attendance-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Clock In</span>
+                                <span class="summary-value" id="dashboard-today-clock-in">--:--</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Clock Out</span>
+                                <span class="summary-value" id="dashboard-today-clock-out">--:--</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Today's Hours</span>
+                                <span class="summary-value" id="dashboard-today-hours">0h 0m</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Status</span>
+                                <span class="summary-value" id="dashboard-today-status">Not Started</span>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -312,6 +365,44 @@
                         <div class="product-search">
                             <input type="text" id="dispense-search" placeholder="Search product name...">
                             <div id="product-suggestions" class="suggestions"></div>
+                        </div>
+
+                        <!-- Delivery Method Section -->
+                        <div class="delivery-method-section">
+                            <div class="delivery-header">
+                                <h4><i class="fas fa-truck"></i> Delivery Method</h4>
+                                <p>Select how the customer will receive their order</p>
+                            </div>
+                            <div class="delivery-options">
+                                <div class="delivery-option">
+                                    <input type="radio" id="delivery-pickup" name="delivery-method" value="pickup" checked>
+                                    <label for="delivery-pickup">
+                                        <i class="fas fa-hand-holding"></i>
+                                        <span>Pickup</span>
+                                    </label>
+                                </div>
+                                <div class="delivery-option">
+                                    <input type="radio" id="delivery-home" name="delivery-method" value="home-delivery">
+                                    <label for="delivery-home">
+                                        <i class="fas fa-home"></i>
+                                        <span>Home Delivery</span>
+                                    </label>
+                                </div>
+                                <div class="delivery-option">
+                                    <input type="radio" id="delivery-online" name="delivery-method" value="online-order">
+                                    <label for="delivery-online">
+                                        <i class="fas fa-laptop"></i>
+                                        <span>Online Order</span>
+                                    </label>
+                                </div>
+                                <div class="delivery-option">
+                                    <input type="radio" id="delivery-app" name="delivery-method" value="delivery-app">
+                                    <label for="delivery-app">
+                                        <i class="fas fa-mobile-alt"></i>
+                                        <span>Delivery App</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Customer Loyalty Section -->
@@ -485,6 +576,178 @@
                             </div>
                             <div id="discount-history-list" class="discount-history-list">
                                 <!-- Discount history will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clinical Decision Support System Section -->
+            <section id="clinical-support" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-stethoscope"></i> Clinical Decision Support System</h2>
+                    <p>Get instant clinical guidance and answers about medicines using AI-powered assistance</p>
+                </div>
+
+                <div class="clinical-support-container">
+                    <!-- API Configuration -->
+                    <div class="api-config-section">
+                        <div class="config-card">
+                            <h3><i class="fas fa-cog"></i> OpenAI API Configuration</h3>
+                            <div class="config-content">
+                                <div class="config-form">
+                                    <div class="form-group">
+                                        <label for="openai-api-key">API Key:</label>
+                                        <div class="input-with-toggle">
+                                            <input type="password" id="openai-api-key" placeholder="sk-..." class="api-key-input">
+                                            <button type="button" id="toggle-api-key" class="btn-toggle">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="openai-model">Model:</label>
+                                        <select id="openai-model" class="model-select">
+                                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended)</option>
+                                            <option value="gpt-4">GPT-4 (More Accurate)</option>
+                                            <option value="gpt-4-turbo">GPT-4 Turbo (Latest)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="max-tokens">Max Tokens:</label>
+                                        <input type="number" id="max-tokens" value="1000" min="100" max="4000" class="tokens-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="temperature">Temperature:</label>
+                                        <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7" class="temperature-slider">
+                                        <span id="temperature-value">0.7</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="config-actions">
+                                    <button id="test-api-key" class="btn btn-outline">
+                                        <i class="fas fa-vial"></i> Test Connection
+                                    </button>
+                                    <button id="save-api-key" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Save Configuration
+                                    </button>
+                                    <button id="clear-api-key" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> Clear Key
+                                    </button>
+                                </div>
+                                
+                                <div class="api-status">
+                                    <div class="status-info">
+                                        <span id="api-status-indicator" class="status-indicator offline">●</span>
+                                        <span id="api-status-text">API Key Not Configured</span>
+                                    </div>
+                                    <div id="api-details" class="api-details" style="display: none;">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Model:</span>
+                                            <span id="current-model" class="detail-value">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Max Tokens:</span>
+                                            <span id="current-tokens" class="detail-value">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Temperature:</span>
+                                            <span id="current-temperature" class="detail-value">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Last Tested:</span>
+                                            <span id="last-tested" class="detail-value">Never</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="config-help">
+                                    <h4><i class="fas fa-info-circle"></i> How to Get Your API Key:</h4>
+                                    <ol>
+                                        <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                                        <li>Sign in to your OpenAI account</li>
+                                        <li>Click "Create new secret key"</li>
+                                        <li>Copy the key (starts with "sk-")</li>
+                                        <li>Paste it in the field above</li>
+                                    </ol>
+                                    <div class="security-note">
+                                        <i class="fas fa-shield-alt"></i>
+                                        <strong>Security:</strong> Your API key is stored locally in your browser and never shared with external servers.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Interface -->
+                    <div class="chat-interface">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-robot"></i> Clinical Assistant</h3>
+                            <div class="chat-controls">
+                                <button id="clear-chat" class="btn btn-outline">
+                                    <i class="fas fa-trash"></i> Clear Chat
+                                </button>
+                                <button id="export-chat" class="btn btn-outline">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="welcome-message">
+                                <div class="message assistant">
+                                    <div class="message-avatar">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        <h4>Welcome to Clinical Decision Support System</h4>
+                                        <p>I'm here to help you with clinical questions about medicines, drug interactions, dosages, contraindications, and more. Please ask me anything related to pharmacy practice.</p>
+                                        <div class="quick-questions">
+                                            <h5>Quick Questions:</h5>
+                                            <div class="question-chips">
+                                                <span class="question-chip" data-question="What are the common side effects of metformin?">Metformin side effects</span>
+                                                <span class="question-chip" data-question="Can I take ibuprofen with warfarin?">Ibuprofen + Warfarin</span>
+                                                <span class="question-chip" data-question="What is the recommended dosage for amoxicillin in adults?">Amoxicillin dosage</span>
+                                                <span class="question-chip" data-question="What are the contraindications for ACE inhibitors?">ACE inhibitor contraindications</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-section">
+                            <div class="input-container">
+                                <textarea id="chat-input" placeholder="Ask a clinical question about medicines..." rows="3"></textarea>
+                                <button id="send-message" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                            </div>
+                            <div class="input-options">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="include-context" checked>
+                                    <span class="checkmark"></span>
+                                    Include medicine inventory context
+                                </label>
+                                <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                                    <i class="fas fa-robot"></i> Assistant is typing...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medicine Context Panel -->
+                    <div class="context-panel">
+                        <h3><i class="fas fa-pills"></i> Medicine Context</h3>
+                        <div class="context-content">
+                            <div class="search-medicine">
+                                <input type="text" id="medicine-search" placeholder="Search medicine in inventory...">
+                                <button id="search-medicine-btn" class="btn btn-outline">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="selected-medicine-info" class="medicine-info">
+                                <p>No medicine selected. Search for a medicine to provide context to the clinical assistant.</p>
                             </div>
                         </div>
                     </div>
@@ -928,6 +1191,21 @@
                         <p>Staff performance with high-profit products</p>
                         <button class="btn btn-primary" id="generate-favorites-performance-report">Generate Report</button>
                     </div>
+                    <div class="report-card">
+                        <h3>Product Movement Report</h3>
+                        <p>Detailed transaction history for specific products</p>
+                        <button class="btn btn-primary" id="generate-product-movement-report">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Staff Performance Report</h3>
+                        <p>Track sales performance and productivity of each staff member</p>
+                        <button class="btn btn-primary" id="generate-staff-performance-report">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Product Expiry Report</h3>
+                        <p>Track products approaching expiration dates and manage inventory</p>
+                        <button class="btn btn-primary" id="generate-expiry-report">Generate Report</button>
+                    </div>
                 </div>
 
                 <!-- Report Display Area -->
@@ -1209,6 +1487,153 @@
                                 <div id="recent-redemptions-list" class="recent-redemptions-list">
                                     <!-- Recent redemptions will be populated here -->
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Attendance Tracking Section -->
+            <section id="attendance" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-clock"></i> Attendance Tracking</h2>
+                    <p>Track staff attendance, working hours, and generate attendance reports</p>
+                </div>
+
+                <div class="attendance-container">
+                    <!-- Clock In/Out Section -->
+                    <div class="clock-section">
+                        <div class="clock-card">
+                            <div class="clock-display">
+                                <div class="current-time" id="current-time">--:--:--</div>
+                                <div class="current-date" id="current-date">-- --, ----</div>
+                            </div>
+                            <div class="clock-actions">
+                                <button id="clock-in-btn" class="btn btn-success clock-btn">
+                                    <i class="fas fa-play"></i> Clock In
+                                </button>
+                                <button id="clock-out-btn" class="btn btn-danger clock-btn" disabled>
+                                    <i class="fas fa-stop"></i> Clock Out
+                                </button>
+                            </div>
+                            <div class="clock-status" id="clock-status">
+                                <span class="status-indicator offline"></span>
+                                <span class="status-text">Not Clocked In</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Today's Attendance Summary -->
+                    <div class="attendance-summary">
+                        <h3><i class="fas fa-calendar-day"></i> Today's Summary</h3>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="summary-label">Clock In Time</span>
+                                <span class="summary-value" id="today-clock-in">--:--</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Clock Out Time</span>
+                                <span class="summary-value" id="today-clock-out">--:--</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Total Hours</span>
+                                <span class="summary-value" id="today-total-hours">0h 0m</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Status</span>
+                                <span class="summary-value" id="today-status">Not Started</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Management -->
+                    <div class="attendance-management">
+                        <div class="management-header">
+                            <h3><i class="fas fa-users"></i> Staff Attendance</h3>
+                            <div class="management-actions">
+                                <button id="export-attendance-btn" class="btn btn-outline">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                                <button id="refresh-attendance-btn" class="btn btn-outline">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="attendance-filters">
+                            <div class="filter-group">
+                                <label for="attendance-date-filter">Date Range:</label>
+                                <input type="date" id="attendance-date-from" class="form-control">
+                                <span>to</span>
+                                <input type="date" id="attendance-date-to" class="form-control">
+                            </div>
+                            <div class="filter-group">
+                                <label for="attendance-staff-filter">Staff Member:</label>
+                                <select id="attendance-staff-filter" class="form-control">
+                                    <option value="">All Staff</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="attendance-status-filter">Status:</label>
+                                <select id="attendance-status-filter" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="present">Present</option>
+                                    <option value="absent">Absent</option>
+                                    <option value="late">Late</option>
+                                    <option value="early-leave">Early Leave</option>
+                                </select>
+                            </div>
+                            <button id="apply-attendance-filters" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                        </div>
+
+                        <!-- Attendance Table -->
+                        <div class="attendance-table-container">
+                            <table class="attendance-table" id="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Staff Name</th>
+                                        <th>Date</th>
+                                        <th>Clock In</th>
+                                        <th>Clock Out</th>
+                                        <th>Total Hours</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-table-body">
+                                    <!-- Attendance data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Reports -->
+                    <div class="attendance-reports">
+                        <h3><i class="fas fa-chart-bar"></i> Attendance Reports</h3>
+                        <div class="reports-grid">
+                            <div class="report-card">
+                                <h4>Monthly Summary</h4>
+                                <p>View monthly attendance statistics and trends</p>
+                                <button class="btn btn-primary" id="monthly-attendance-report">
+                                    <i class="fas fa-calendar-alt"></i> Generate Report
+                                </button>
+                            </div>
+                            <div class="report-card">
+                                <h4>Staff Performance</h4>
+                                <p>Individual staff attendance performance analysis</p>
+                                <button class="btn btn-primary" id="staff-performance-attendance">
+                                    <i class="fas fa-user-chart"></i> Generate Report
+                                </button>
+                            </div>
+                            <div class="report-card">
+                                <h4>Overtime Report</h4>
+                                <p>Track overtime hours and compensation</p>
+                                <button class="btn btn-primary" id="overtime-report">
+                                    <i class="fas fa-clock"></i> Generate Report
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1615,6 +2040,26 @@
                 </div>
             </section>
         </main>
+
+        <!-- Clock-in Warning Footer -->
+        <div id="clock-warning-footer" class="clock-warning-footer" style="display: none;">
+            <div class="warning-content">
+                <div class="warning-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="warning-text">
+                    <strong>Warning:</strong> You have not clocked in today. Please clock in from the dashboard to start tracking your attendance.
+                </div>
+                <div class="warning-actions">
+                    <button id="go-to-dashboard-btn" class="btn btn-warning btn-sm">
+                        <i class="fas fa-clock"></i> Go to Dashboard
+                    </button>
+                    <button id="dismiss-warning-btn" class="btn btn-outline btn-sm">
+                        <i class="fas fa-times"></i> Dismiss
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modals -->
@@ -2376,6 +2821,52 @@
                     <i class="fas fa-check"></i> Apply Offer
                 </button>
                 <button id="cancel-offer-selection" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Selection Modal for Movement Report -->
+    <div id="product-selection-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-box"></i> Select Product for Movement Report</h3>
+                <span class="close" id="close-product-selection-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="product-selection-info">
+                    <p>Select a product to generate a detailed movement report showing all transactions, quantities, prices, and customer information.</p>
+                </div>
+                <div class="product-search-section">
+                    <div class="search-input-group">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="product-search-input" placeholder="Search products by name or SKU...">
+                    </div>
+                </div>
+                <div class="available-products">
+                    <h4>Available Products</h4>
+                    <div id="available-products-list" class="products-list">
+                        <!-- Products will be populated here -->
+                    </div>
+                </div>
+                <div class="date-range-section">
+                    <h4>Date Range (Optional)</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="movement-report-from-date">From Date</label>
+                            <input type="date" id="movement-report-from-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="movement-report-to-date">To Date</label>
+                            <input type="date" id="movement-report-to-date">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-product-selection" class="btn btn-success" disabled>
+                    <i class="fas fa-chart-line"></i> Generate Report
+                </button>
+                <button id="cancel-product-selection" class="btn btn-outline">Cancel</button>
             </div>
         </div>
     </div>

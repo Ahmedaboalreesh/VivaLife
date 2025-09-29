@@ -55,6 +55,13 @@ class PharmacyManagementSystem {
         this.offers = this.loadData('offers') || [];
         this.discountHistory = this.loadData('discountHistory') || [];
         
+        // Attendance Tracking data
+        this.attendanceRecords = this.loadData('attendanceRecords') || [];
+        this.currentAttendance = null; // Current day's attendance record
+        this.clockInterval = null; // For updating the clock display
+        this.clockWarningDismissed = this.loadData('clockWarningDismissed') || false;
+        this.shiftCompleteShown = false; // Flag to prevent duplicate shift complete messages
+        
         this.init();
     }
 
@@ -63,6 +70,8 @@ class PharmacyManagementSystem {
         this.setupDefaultData();
         this.updateCurrencyDisplay();
         this.initializeLogin();
+        this.loadOpenAIKey();
+        this.checkClockInStatus();
     }
 
     setupEventListeners() {
@@ -115,6 +124,140 @@ class PharmacyManagementSystem {
 
         document.getElementById('generate-favorites-performance-report').addEventListener('click', () => {
             this.generateFavoritesPerformanceReport();
+        });
+
+        document.getElementById('generate-product-movement-report').addEventListener('click', () => {
+            this.openProductSelectionModal();
+        });
+
+        document.getElementById('generate-staff-performance-report').addEventListener('click', () => {
+            this.generateStaffPerformanceReport();
+        });
+
+        document.getElementById('generate-expiry-report').addEventListener('click', () => {
+            this.generateExpiryReport();
+        });
+
+        // Attendance Tracking functionality
+        document.getElementById('clock-in-btn').addEventListener('click', () => {
+            this.clockIn();
+        });
+
+        document.getElementById('clock-out-btn').addEventListener('click', () => {
+            this.clockOut();
+        });
+
+        document.getElementById('export-attendance-btn').addEventListener('click', () => {
+            this.exportAttendanceData();
+        });
+
+        document.getElementById('refresh-attendance-btn').addEventListener('click', () => {
+            this.loadAttendanceData();
+        });
+
+        document.getElementById('apply-attendance-filters').addEventListener('click', () => {
+            this.applyAttendanceFilters();
+        });
+
+        document.getElementById('monthly-attendance-report').addEventListener('click', () => {
+            this.generateMonthlyAttendanceReport();
+        });
+
+        document.getElementById('staff-performance-attendance').addEventListener('click', () => {
+            this.generateStaffAttendanceReport();
+        });
+
+        document.getElementById('overtime-report').addEventListener('click', () => {
+            this.generateOvertimeReport();
+        });
+
+        // Dashboard attendance functionality
+        document.getElementById('dashboard-clock-in-btn').addEventListener('click', () => {
+            this.clockIn();
+        });
+
+        document.getElementById('dashboard-clock-out-btn').addEventListener('click', () => {
+            this.clockOut();
+        });
+
+        // Clock Warning Footer
+        document.getElementById('go-to-dashboard-btn')?.addEventListener('click', () => this.goToDashboard());
+        document.getElementById('dismiss-warning-btn')?.addEventListener('click', () => this.dismissWarning());
+
+        // Clinical Support System functionality
+        document.getElementById('save-api-key').addEventListener('click', () => {
+            this.saveOpenAIConfig();
+        });
+
+        document.getElementById('test-api-key').addEventListener('click', () => {
+            this.testOpenAIKey();
+        });
+
+        document.getElementById('clear-api-key').addEventListener('click', () => {
+            this.clearOpenAIKey();
+        });
+
+        document.getElementById('toggle-api-key').addEventListener('click', () => {
+            this.toggleAPIKeyVisibility();
+        });
+
+        document.getElementById('temperature').addEventListener('input', (e) => {
+            document.getElementById('temperature-value').textContent = e.target.value;
+        });
+
+        document.getElementById('send-message').addEventListener('click', () => {
+            this.sendChatMessage();
+        });
+
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendChatMessage();
+            }
+        });
+
+        document.getElementById('clear-chat').addEventListener('click', () => {
+            this.clearChat();
+        });
+
+        document.getElementById('export-chat').addEventListener('click', () => {
+            this.exportChat();
+        });
+
+        document.getElementById('search-medicine-btn').addEventListener('click', () => {
+            this.searchMedicineForContext();
+        });
+
+        document.getElementById('medicine-search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.searchMedicineForContext();
+            }
+        });
+
+        // Quick question chips
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('question-chip')) {
+                const question = e.target.getAttribute('data-question');
+                document.getElementById('chat-input').value = question;
+                this.sendChatMessage();
+            }
+        });
+
+        // Product selection modal functionality
+        document.getElementById('close-product-selection-modal').addEventListener('click', () => {
+            this.closeModal('product-selection-modal');
+        });
+
+        document.getElementById('cancel-product-selection').addEventListener('click', () => {
+            this.closeModal('product-selection-modal');
+        });
+
+        document.getElementById('confirm-product-selection').addEventListener('click', () => {
+            this.generateProductMovementReport();
+        });
+
+        document.getElementById('product-search-input').addEventListener('input', (e) => {
+            this.filterProductsForReport(e.target.value);
         });
 
         // Report actions
@@ -745,6 +888,9 @@ class PharmacyManagementSystem {
         });
         document.getElementById(sectionName).classList.add('active');
 
+        // Check clock-in status when switching sections
+        this.checkClockInStatus();
+
         // Load section-specific data
         switch(sectionName) {
             case 'dashboard':
@@ -774,6 +920,12 @@ class PharmacyManagementSystem {
             case 'discounts':
                 this.loadDiscounts();
                 break;
+            case 'clinical-support':
+                this.loadClinicalSupport();
+                break;
+            case 'attendance':
+                this.loadAttendance();
+                break;
             case 'admin':
                 this.loadAdmin();
                 break;
@@ -786,6 +938,7 @@ class PharmacyManagementSystem {
         this.updateDashboardStats();
         this.createDispensingChart();
         this.loadLowStockItems();
+        this.loadDashboardAttendance();
     }
 
     updatePharmacyIndicator() {
@@ -966,6 +1119,19 @@ class PharmacyManagementSystem {
                     <span class="stock-level">${item.currentStock} left</span>
                 </div>
             `).join('');
+    }
+
+    loadDashboardAttendance() {
+        // Initialize clock display
+        this.updateClockDisplay();
+        
+        // Load today's attendance
+        this.loadTodayAttendance();
+        
+        // Setup clock interval if not already running
+        if (!this.clockInterval) {
+            this.setupClockInterval();
+        }
     }
 
     // Inventory management
@@ -1765,9 +1931,9 @@ class PharmacyManagementSystem {
             const discountedItemPrice = item.price - (item.price * discountPerItem);
 
             return `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.name}</div>
                         <div class="cart-item-price">
                             ${this.currentRedemption ? 
                                 `<span class="original-price">${this.formatCurrency(item.price)}</span> → <span class="discounted-price">${this.formatCurrency(discountedItemPrice)}</span> each` :
@@ -1780,18 +1946,18 @@ class PharmacyManagementSystem {
                                 `${this.formatCurrency(itemTotal)}`
                             }
                         </div>
-                    </div>
-                    <div class="cart-item-controls">
-                        <div class="quantity-control">
-                            <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity - 1})">-</button>
-                            <span>${item.quantity}</span>
-                            <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity + 1})">+</button>
-                        </div>
-                        <button class="btn btn-sm btn-danger" onclick="pharmacySystem.removeFromCart('${item.sku}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
                 </div>
+                <div class="cart-item-controls">
+                    <div class="quantity-control">
+                        <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity - 1})">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity + 1})">+</button>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="pharmacySystem.removeFromCart('${item.sku}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
             `;
         }).join('');
 
@@ -3270,7 +3436,7 @@ class PharmacyManagementSystem {
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
                         'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'manage-staff',
-                        'view-reports', 'admin-access', 'export-data', 'import-data'
+                        'view-reports', 'view-attendance', 'manage-attendance', 'admin-access', 'export-data', 'import-data'
                     ],
                     isDefault: true
                 },
@@ -3281,7 +3447,7 @@ class PharmacyManagementSystem {
                     permissions: [
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
-                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'view-reports', 'export-data'
+                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'view-reports', 'view-attendance', 'manage-attendance', 'export-data'
                     ],
                     isDefault: true
                 },
@@ -3292,7 +3458,7 @@ class PharmacyManagementSystem {
                     permissions: [
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
-                        'view-loyalty', 'manage-loyalty', 'view-discounts', 'view-reports'
+                        'view-loyalty', 'manage-loyalty', 'view-discounts', 'view-reports', 'view-attendance'
                     ],
                     isDefault: true
                 },
@@ -3481,8 +3647,43 @@ class PharmacyManagementSystem {
     }
 
     getStaffName(staffId) {
-        if (!staffId || staffId === 'Unknown') return 'Unknown';
-        const staff = this.staff.find(s => s.id === staffId);
+        if (!staffId || staffId === 'Unknown' || staffId === 'unknown' || staffId === 'system') {
+            return 'System';
+        }
+        
+        // Handle ADMIN user specially
+        if (staffId === 'ADMIN') {
+            return 'System Administrator';
+        }
+        
+        // Ensure staff array is loaded
+        if (!this.staff || this.staff.length === 0) {
+            this.staff = this.loadData('staff') || [];
+        }
+        
+        // Try to find staff by ID (exact match)
+        let staff = this.staff.find(s => s.id === staffId);
+        
+        // If not found, try case-insensitive ID match
+        if (!staff) {
+            staff = this.staff.find(s => s.id && s.id.toLowerCase() === staffId.toLowerCase());
+        }
+        
+        // If not found, try to find by name (in case ID format changed)
+        if (!staff) {
+            staff = this.staff.find(s => s.name === staffId);
+        }
+        
+        // If still not found and current user matches, use current user
+        if (!staff && this.currentUser && this.currentUser.id === staffId) {
+            staff = this.currentUser;
+        }
+        
+        // If still not found, try partial ID match
+        if (!staff) {
+            staff = this.staff.find(s => s.id && s.id.includes(staffId));
+        }
+        
         return staff ? staff.name : 'Unknown';
     }
 
@@ -4988,54 +5189,56 @@ class PharmacyManagementSystem {
     }
 
     exportReport() {
-        const title = document.getElementById('report-title').textContent;
-        const content = document.getElementById('report-content').innerHTML;
-        
-        // Create a new window for printing/exporting
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        if (!printWindow) {
-            this.showMessage('Export window was blocked. Please allow popups and try again.', 'error');
+        const reportContent = document.getElementById('report-display');
+        if (!reportContent || reportContent.style.display === 'none') {
+            this.showMessage('No report to export', 'error');
             return;
         }
+
+        const reportTitle = document.getElementById('report-title').textContent;
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `${reportTitle.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
+
+        // Extract data from the report based on the report type
+        let exportData = [];
+        const tables = reportContent.querySelectorAll('table');
         
-        const exportHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${title} - VivaLife Pharmacy</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .report-header { text-align: center; margin-bottom: 30px; }
-                    .report-header h1 { color: #333; margin-bottom: 10px; }
-                    .report-header p { color: #666; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; font-weight: bold; }
-                    .report-summary { display: flex; justify-content: space-around; margin-bottom: 30px; }
-                    .summary-item { text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; }
-                    .summary-item h3 { margin: 0 0 5px 0; color: #333; }
-                    .summary-item p { margin: 0; color: #666; }
-                </style>
-            </head>
-            <body>
-                <div class="report-header">
-                    <h1>${title}</h1>
-                    <p>VivaLife Pharmacy Management System</p>
-                    <p>Generated on ${new Date().toLocaleString('en-GB')}</p>
-                </div>
-                ${content}
-            </body>
-            </html>
-        `;
+        if (tables.length > 0) {
+            // Extract data from all tables
+            tables.forEach((table, tableIndex) => {
+                if (tableIndex > 0) {
+                    exportData.push(['']); // Empty row between tables
+                }
+                
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+                const rows = Array.from(table.querySelectorAll('tbody tr')).map(row => {
+                    return Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+                });
+                
+                exportData.push([`Table ${tableIndex + 1}`]);
+                exportData.push(headers);
+                exportData.push(...rows);
+            });
+        } else {
+            // If no tables, extract text content
+            const textContent = reportContent.textContent;
+            exportData = [['Report Content'], [textContent]];
+        }
+
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
         
-        printWindow.document.write(exportHTML);
-        printWindow.document.close();
+        // Set column widths
+        const colWidths = exportData[0] ? exportData[0].map((_, i) => ({ wch: 20 })) : [{ wch: 20 }];
+        ws['!cols'] = colWidths;
         
-        // Trigger print dialog
-        setTimeout(() => {
-            printWindow.print();
-        }, 500);
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Report Data');
+        
+        // Save the file
+        XLSX.writeFile(wb, filename);
+        this.showMessage('Report exported successfully as Excel file', 'success');
     }
 
     printReport() {
@@ -5604,6 +5807,2119 @@ class PharmacyManagementSystem {
         `;
 
         this.displayReport('Favorite List Performance Report', reportHTML);
+    }
+
+    // ==================== PRODUCT MOVEMENT REPORT METHODS ====================
+
+    openProductSelectionModal() {
+        this.loadProductsForReport();
+        this.openModal('product-selection-modal');
+    }
+
+    loadProductsForReport() {
+        const availableProductsList = document.getElementById('available-products-list');
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        
+        // Filter products by current pharmacy
+        const pharmacyProducts = this.products.filter(p => p.pharmacyId === currentPharmacyId);
+        
+        if (pharmacyProducts.length === 0) {
+            availableProductsList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-box"></i>
+                    <p>No products available for the current pharmacy</p>
+                </div>
+            `;
+            return;
+        }
+
+        availableProductsList.innerHTML = pharmacyProducts.map(product => `
+            <div class="product-item" data-product-id="${product.id}">
+                <div class="product-info">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-sku">${product.sku}</div>
+                </div>
+                <div class="product-details">
+                    <div class="product-price">${this.formatCurrency(product.price)}</div>
+                    <div class="product-stock">Stock: ${product.currentStock}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // Add click listeners to product items
+        availableProductsList.querySelectorAll('.product-item').forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove previous selection
+                availableProductsList.querySelectorAll('.product-item').forEach(i => i.classList.remove('selected'));
+                // Add selection to clicked item
+                item.classList.add('selected');
+                
+                // Enable confirm button
+                document.getElementById('confirm-product-selection').disabled = false;
+            });
+        });
+    }
+
+    filterProductsForReport(searchTerm) {
+        const availableProductsList = document.getElementById('available-products-list');
+        const productItems = availableProductsList.querySelectorAll('.product-item');
+        
+        productItems.forEach(item => {
+            const productName = item.querySelector('.product-name').textContent.toLowerCase();
+            const productSku = item.querySelector('.product-sku').textContent.toLowerCase();
+            const search = searchTerm.toLowerCase();
+            
+            if (productName.includes(search) || productSku.includes(search)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    generateProductMovementReport() {
+        const selectedProduct = document.querySelector('.product-item.selected');
+        if (!selectedProduct) {
+            this.showMessage('Please select a product', 'error');
+            return;
+        }
+
+        const productId = selectedProduct.dataset.productId;
+        const product = this.products.find(p => p.id === productId);
+        if (!product) {
+            this.showMessage('Product not found', 'error');
+            return;
+        }
+
+        // Ensure staff data is loaded
+        if (!this.staff || this.staff.length === 0) {
+            this.staff = this.loadData('staff') || [];
+        }
+
+        // Get date range
+        const fromDate = document.getElementById('movement-report-from-date').value;
+        const toDate = document.getElementById('movement-report-to-date').value;
+
+        // Get all dispensing records for this product
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        let dispensingRecords = this.dispensingHistory.filter(record => 
+            record.pharmacyId === currentPharmacyId &&
+            record.items.some(item => item.id === productId)
+        );
+
+        // Filter by date range if provided
+        if (fromDate) {
+            const fromDateObj = new Date(fromDate);
+            dispensingRecords = dispensingRecords.filter(record => 
+                new Date(record.timestamp || record.date) >= fromDateObj
+            );
+        }
+
+        if (toDate) {
+            const toDateObj = new Date(toDate);
+            toDateObj.setHours(23, 59, 59, 999); // End of day
+            dispensingRecords = dispensingRecords.filter(record => 
+                new Date(record.timestamp || record.date) <= toDateObj
+            );
+        }
+
+        // Sort by date (newest first)
+        dispensingRecords.sort((a, b) => 
+            new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)
+        );
+
+        // Calculate summary statistics
+        const totalTransactions = dispensingRecords.length;
+        const totalQuantitySold = dispensingRecords.reduce((sum, record) => {
+            const item = record.items.find(item => item.id === productId);
+            return sum + (item ? item.quantity : 0);
+        }, 0);
+        const totalRevenue = dispensingRecords.reduce((sum, record) => {
+            const item = record.items.find(item => item.id === productId);
+            return sum + (item ? item.price * item.quantity : 0);
+        }, 0);
+        const averagePrice = totalQuantitySold > 0 ? totalRevenue / totalQuantitySold : 0;
+
+        // Get unique customers
+        const uniqueCustomers = new Set();
+        dispensingRecords.forEach(record => {
+            if (record.customerPhone) {
+                uniqueCustomers.add(record.customerPhone);
+            }
+        });
+
+        const currentDate = new Date().toLocaleDateString('en-GB');
+        const currentTime = new Date().toLocaleTimeString();
+        const pharmacyName = this.currentPharmacy ? this.currentPharmacy.name : 'All Pharmacies';
+
+        const reportHTML = `
+            <div class="product-movement-report">
+                <div class="report-summary">
+                    <h4>Product Summary</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Product Name:</span>
+                            <span class="summary-value">${product.name}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">SKU:</span>
+                            <span class="summary-value">${product.sku}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Current Price:</span>
+                            <span class="summary-value">${this.formatCurrency(product.price)}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Current Stock:</span>
+                            <span class="summary-value">${product.currentStock}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="movement-statistics">
+                    <h4>Movement Statistics</h4>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>${totalTransactions}</h3>
+                                <p>Total Transactions</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>${totalQuantitySold}</h3>
+                                <p>Total Quantity Sold</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>${this.formatCurrency(totalRevenue)}</h3>
+                                <p>Total Revenue</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>${this.formatCurrency(averagePrice)}</h3>
+                                <p>Average Price</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>${uniqueCustomers.size}</h3>
+                                <p>Unique Customers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transaction-details">
+                    <h4>Transaction Details</h4>
+                    <div class="table-container">
+                        <table class="movement-table">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Invoice #</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total Price</th>
+                                    <th>Customer Phone</th>
+                                    <th>Staff Member</th>
+                                    <th>Discounts/Offers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dispensingRecords.map(record => {
+                                    const item = record.items.find(item => item.id === productId);
+                                    const staffName = this.getStaffName(record.staffId);
+                                    const transactionDate = new Date(record.timestamp || record.date);
+                                    
+                                    // Get discount/offer information
+                                    let discountInfo = '';
+                                    if (record.discount) {
+                                        discountInfo += `Discount: ${record.discount.name}`;
+                                    }
+                                    if (record.offer) {
+                                        discountInfo += discountInfo ? '<br>' : '';
+                                        discountInfo += `Offer: ${record.offer.name}`;
+                                    }
+                                    if (record.redemption) {
+                                        discountInfo += discountInfo ? '<br>' : '';
+                                        discountInfo += `Points: ${record.redemption.pointsRedeemed}`;
+                                    }
+                                    
+                                    return `
+                                        <tr>
+                                            <td>${transactionDate.toLocaleString()}</td>
+                                            <td><strong>${record.id}</strong></td>
+                                            <td>${item.quantity}</td>
+                                            <td>${this.formatCurrency(item.price)}</td>
+                                            <td>${this.formatCurrency(item.price * item.quantity)}</td>
+                                            <td>${record.customerPhone || '-'}</td>
+                                            <td>${staffName}</td>
+                                            <td>${discountInfo || '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="report-footer">
+                    <div class="report-info">
+                        <p><strong>Report Generated:</strong> ${currentDate} at ${currentTime}</p>
+                        <p><strong>Pharmacy:</strong> ${pharmacyName}</p>
+                        <p><strong>Generated By:</strong> ${this.currentUser ? this.currentUser.name : 'System'}</p>
+                        <p><strong>Date Range:</strong> ${fromDate ? fromDate : 'All time'} ${toDate ? 'to ' + toDate : ''}</p>
+                        <p><strong>Total Records:</strong> ${totalTransactions} transactions</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.displayReport(`Product Movement Report - ${product.name}`, reportHTML);
+        this.closeModal('product-selection-modal');
+    }
+
+    // ==================== STAFF PERFORMANCE REPORT METHODS ====================
+
+    generateStaffPerformanceReport() {
+        // Get all dispensing records for current pharmacy
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const dispensingRecords = this.dispensingHistory.filter(record => 
+            record.pharmacyId === currentPharmacyId
+        );
+
+        // Calculate staff performance metrics
+        const staffPerformance = {};
+        
+        // First, count customers created through loyalty program page
+        this.customers.forEach(customer => {
+            if (customer.createdBy && customer.createdBy.staffId) {
+                const staffId = customer.createdBy.staffId;
+                const staffName = this.getStaffName(staffId);
+                
+                if (!staffPerformance[staffId]) {
+                    staffPerformance[staffId] = {
+                        staffId: staffId,
+                        staffName: staffName,
+                        totalTransactions: 0,
+                        totalRevenue: 0,
+                        totalItems: 0,
+                        averageTransactionValue: 0,
+                        transactions: [],
+                        customerCount: new Set(),
+                        discountGiven: 0,
+                        offersApplied: 0,
+                        loyaltyRedemptions: 0,
+                        customersRegistered: 0
+                    };
+                }
+                
+                staffPerformance[staffId].customersRegistered++;
+            }
+        });
+        
+        dispensingRecords.forEach(record => {
+            const staffId = record.staffId;
+            const staffName = this.getStaffName(staffId);
+            
+            if (!staffPerformance[staffId]) {
+                staffPerformance[staffId] = {
+                    staffId: staffId,
+                    staffName: staffName,
+                    totalTransactions: 0,
+                    totalRevenue: 0,
+                    totalItems: 0,
+                    averageTransactionValue: 0,
+                    transactions: [],
+                    customerCount: new Set(),
+                    discountGiven: 0,
+                    offersApplied: 0,
+                    loyaltyRedemptions: 0,
+                    customersRegistered: 0
+                };
+            }
+            
+            const performance = staffPerformance[staffId];
+            performance.totalTransactions++;
+            performance.totalRevenue += record.totalAmount || 0;
+            performance.totalItems += record.items ? record.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+            performance.transactions.push(record);
+            
+            // Count unique customers
+            if (record.customerPhone) {
+                performance.customerCount.add(record.customerPhone);
+            }
+            
+            // Count discounts, offers, and redemptions
+            if (record.discount) {
+                performance.discountGiven++;
+            }
+            if (record.offer) {
+                performance.offersApplied++;
+            }
+            if (record.redemption) {
+                performance.loyaltyRedemptions++;
+            }
+            
+            // Count customer registrations from dispensing (additional to loyalty program page)
+            if (record.customerRegistration) {
+                performance.customersRegistered++;
+            }
+        });
+
+        // Calculate averages and convert sets to counts
+        Object.values(staffPerformance).forEach(performance => {
+            performance.averageTransactionValue = performance.totalTransactions > 0 
+                ? performance.totalRevenue / performance.totalTransactions 
+                : 0;
+            performance.uniqueCustomers = performance.customerCount.size;
+            delete performance.customerCount; // Clean up the Set
+        });
+
+        // Convert to array and sort by total revenue
+        const staffArray = Object.values(staffPerformance).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        // Calculate summary statistics
+        const totalRevenue = staffArray.reduce((sum, staff) => sum + staff.totalRevenue, 0);
+        const totalTransactions = staffArray.reduce((sum, staff) => sum + staff.totalTransactions, 0);
+        const totalItems = staffArray.reduce((sum, staff) => sum + staff.totalItems, 0);
+        const totalCustomerRegistrations = staffArray.reduce((sum, staff) => sum + staff.customersRegistered, 0);
+        const averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+        const currentDate = new Date().toLocaleDateString('en-GB');
+        const currentTime = new Date().toLocaleTimeString();
+        const pharmacyName = this.currentPharmacy ? this.currentPharmacy.name : 'All Pharmacies';
+
+        const reportHTML = `
+            <div class="staff-performance-report">
+                <div class="report-summary">
+                    <h4>Performance Summary</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Staff Members:</span>
+                            <span class="summary-value">${staffArray.length}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Revenue:</span>
+                            <span class="summary-value">${this.formatCurrency(totalRevenue)}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Transactions:</span>
+                            <span class="summary-value">${totalTransactions}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Items Sold:</span>
+                            <span class="summary-value">${totalItems}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Average Transaction Value:</span>
+                            <span class="summary-value">${this.formatCurrency(averageTransactionValue)}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Customer Registrations:</span>
+                            <span class="summary-value">${totalCustomerRegistrations}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="staff-performance-table">
+                    <h4>Staff Performance Rankings</h4>
+                    <div class="table-container">
+                        <table class="performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Staff Member</th>
+                                    <th>Total Revenue</th>
+                                    <th>Transactions</th>
+                                    <th>Items Sold</th>
+                                    <th>Avg. Transaction</th>
+                                    <th>Unique Customers</th>
+                                    <th>Customers Registered</th>
+                                    <th>Discounts Given</th>
+                                    <th>Offers Applied</th>
+                                    <th>Loyalty Redemptions</th>
+                                    <th>Performance Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${staffArray.map((staff, index) => {
+                                    // Calculate performance score (0-100)
+                                    const maxRevenue = Math.max(...staffArray.map(s => s.totalRevenue));
+                                    const maxTransactions = Math.max(...staffArray.map(s => s.totalTransactions));
+                                    const maxRegistrations = Math.max(...staffArray.map(s => s.customersRegistered));
+                                    const revenueScore = maxRevenue > 0 ? (staff.totalRevenue / maxRevenue) * 40 : 0;
+                                    const transactionScore = maxTransactions > 0 ? (staff.totalTransactions / maxTransactions) * 25 : 0;
+                                    const customerScore = staff.uniqueCustomers > 0 ? Math.min((staff.uniqueCustomers / 10) * 15, 15) : 0;
+                                    const registrationScore = maxRegistrations > 0 ? (staff.customersRegistered / maxRegistrations) * 20 : 0;
+                                    const performanceScore = Math.round(revenueScore + transactionScore + customerScore + registrationScore);
+                                    
+                                    return `
+                                        <tr>
+                                            <td>
+                                                <div class="rank-badge ${index < 3 ? 'top-' + (index + 1) : ''}">
+                                                    ${index + 1}
+                                                </div>
+                                            </td>
+                                            <td><strong>${staff.staffName}</strong></td>
+                                            <td>${this.formatCurrency(staff.totalRevenue)}</td>
+                                            <td>${staff.totalTransactions}</td>
+                                            <td>${staff.totalItems}</td>
+                                            <td>${this.formatCurrency(staff.averageTransactionValue)}</td>
+                                            <td>${staff.uniqueCustomers}</td>
+                                            <td>${staff.customersRegistered}</td>
+                                            <td>${staff.discountGiven}</td>
+                                            <td>${staff.offersApplied}</td>
+                                            <td>${staff.loyaltyRedemptions}</td>
+                                            <td>
+                                                <div class="performance-bar">
+                                                    <div class="performance-fill" style="width: ${performanceScore}%"></div>
+                                                    <span class="performance-text">${performanceScore}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="top-performers">
+                    <h4>Top Performers</h4>
+                    <div class="performers-grid">
+                        ${staffArray.slice(0, 3).map((staff, index) => {
+                            const medal = ['🥇', '🥈', '🥉'][index];
+                            return `
+                                <div class="performer-card ${index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze'}">
+                                    <div class="performer-rank">${medal}</div>
+                                    <div class="performer-info">
+                                        <h5>${staff.staffName}</h5>
+                                        <p class="performer-revenue">${this.formatCurrency(staff.totalRevenue)}</p>
+                                        <p class="performer-transactions">${staff.totalTransactions} transactions</p>
+                                        <p class="performer-customers">${staff.uniqueCustomers} customers</p>
+                                        <p class="performer-registrations">${staff.customersRegistered} new registrations</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="performance-insights">
+                    <h4>Performance Insights</h4>
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <div class="insight-icon">📈</div>
+                            <div class="insight-content">
+                                <h5>Top Revenue Generator</h5>
+                                <p>${staffArray[0] ? staffArray[0].staffName : 'N/A'} with ${this.formatCurrency(staffArray[0]?.totalRevenue || 0)}</p>
+                            </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-icon">🔄</div>
+                            <div class="insight-content">
+                                <h5>Most Active</h5>
+                                <p>${staffArray.reduce((max, staff) => staff.totalTransactions > max.totalTransactions ? staff : max, staffArray[0] || {staffName: 'N/A', totalTransactions: 0}).staffName} with ${staffArray.reduce((max, staff) => staff.totalTransactions > max.totalTransactions ? staff : max, staffArray[0] || {totalTransactions: 0}).totalTransactions} transactions</p>
+                            </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-icon">👥</div>
+                            <div class="insight-content">
+                                <h5>Customer Champion</h5>
+                                <p>${staffArray.reduce((max, staff) => staff.uniqueCustomers > max.uniqueCustomers ? staff : max, staffArray[0] || {staffName: 'N/A', uniqueCustomers: 0}).staffName} with ${staffArray.reduce((max, staff) => staff.uniqueCustomers > max.uniqueCustomers ? staff : max, staffArray[0] || {uniqueCustomers: 0}).uniqueCustomers} unique customers</p>
+                            </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-icon">📝</div>
+                            <div class="insight-content">
+                                <h5>Registration Leader</h5>
+                                <p>${staffArray.reduce((max, staff) => staff.customersRegistered > max.customersRegistered ? staff : max, staffArray[0] || {staffName: 'N/A', customersRegistered: 0}).staffName} with ${staffArray.reduce((max, staff) => staff.customersRegistered > max.customersRegistered ? staff : max, staffArray[0] || {customersRegistered: 0}).customersRegistered} new customer registrations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-footer">
+                    <div class="report-info">
+                        <p><strong>Report Generated:</strong> ${currentDate} at ${currentTime}</p>
+                        <p><strong>Pharmacy:</strong> ${pharmacyName}</p>
+                        <p><strong>Generated By:</strong> ${this.currentUser ? this.currentUser.name : 'System'}</p>
+                        <p><strong>Performance Period:</strong> All dispensing records</p>
+                        <p><strong>Total Staff:</strong> ${staffArray.length} members</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.displayReport('Staff Performance Report', reportHTML);
+    }
+
+    // ==================== EXPIRY REPORT METHODS ====================
+
+    generateExpiryReport() {
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const pharmacyProducts = this.products.filter(p => p.pharmacyId === currentPharmacyId);
+        
+        const today = new Date();
+        const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+        const sixtyDaysFromNow = new Date(today.getTime() + (60 * 24 * 60 * 60 * 1000));
+        const ninetyDaysFromNow = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000));
+
+        // Categorize products by expiry status
+        const expiredProducts = [];
+        const expiringSoon = []; // Within 30 days
+        const expiringWithin60Days = [];
+        const expiringWithin90Days = [];
+        const noExpiryDate = [];
+
+        pharmacyProducts.forEach(product => {
+            if (!product.expiryDate) {
+                noExpiryDate.push(product);
+                return;
+            }
+
+            const expiryDate = new Date(product.expiryDate);
+            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+
+            if (daysUntilExpiry < 0) {
+                expiredProducts.push({ ...product, daysUntilExpiry });
+            } else if (daysUntilExpiry <= 30) {
+                expiringSoon.push({ ...product, daysUntilExpiry });
+            } else if (daysUntilExpiry <= 60) {
+                expiringWithin60Days.push({ ...product, daysUntilExpiry });
+            } else if (daysUntilExpiry <= 90) {
+                expiringWithin90Days.push({ ...product, daysUntilExpiry });
+            }
+        });
+
+        // Calculate summary statistics
+        const totalProducts = pharmacyProducts.length;
+        const productsWithExpiry = pharmacyProducts.filter(p => p.expiryDate).length;
+        const expiredCount = expiredProducts.length;
+        const expiringSoonCount = expiringSoon.length;
+        const expiringWithin60Count = expiringWithin60Days.length;
+        const expiringWithin90Count = expiringWithin90Days.length;
+        const noExpiryCount = noExpiryDate.length;
+
+        // Calculate total value at risk
+        const calculateValueAtRisk = (products) => {
+            return products.reduce((total, product) => {
+                return total + (product.sellingPrice * product.currentStock);
+            }, 0);
+        };
+
+        const expiredValue = calculateValueAtRisk(expiredProducts);
+        const expiringSoonValue = calculateValueAtRisk(expiringSoon);
+        const expiringWithin60Value = calculateValueAtRisk(expiringWithin60Days);
+        const expiringWithin90Value = calculateValueAtRisk(expiringWithin90Days);
+
+        const currentDate = new Date().toLocaleDateString('en-GB');
+        const currentTime = new Date().toLocaleTimeString();
+        const pharmacyName = this.currentPharmacy ? this.currentPharmacy.name : 'All Pharmacies';
+
+        const reportHTML = `
+            <div class="expiry-report">
+                <div class="report-summary">
+                    <h4>Expiry Report Summary</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item critical">
+                            <span class="summary-label">Expired Products:</span>
+                            <span class="summary-value">${expiredCount}</span>
+                            <span class="summary-value-small">${this.formatCurrency(expiredValue)}</span>
+                        </div>
+                        <div class="summary-item warning">
+                            <span class="summary-label">Expiring Soon (≤30 days):</span>
+                            <span class="summary-value">${expiringSoonCount}</span>
+                            <span class="summary-value-small">${this.formatCurrency(expiringSoonValue)}</span>
+                        </div>
+                        <div class="summary-item caution">
+                            <span class="summary-label">Expiring in 60 days:</span>
+                            <span class="summary-value">${expiringWithin60Count}</span>
+                            <span class="summary-value-small">${this.formatCurrency(expiringWithin60Value)}</span>
+                        </div>
+                        <div class="summary-item info">
+                            <span class="summary-label">Expiring in 90 days:</span>
+                            <span class="summary-value">${expiringWithin90Count}</span>
+                            <span class="summary-value-small">${this.formatCurrency(expiringWithin90Value)}</span>
+                        </div>
+                        <div class="summary-item neutral">
+                            <span class="summary-label">No Expiry Date:</span>
+                            <span class="summary-value">${noExpiryCount}</span>
+                        </div>
+                        <div class="summary-item total">
+                            <span class="summary-label">Total Products:</span>
+                            <span class="summary-value">${totalProducts}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${expiredProducts.length > 0 ? `
+                <div class="expiry-section critical-section">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Expired Products (${expiredProducts.length})</h4>
+                    <div class="table-container">
+                        <table class="expiry-table critical">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Batch Number</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Current Stock</th>
+                                    <th>Value at Risk</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expiredProducts.map(product => `
+                                    <tr>
+                                        <td><strong>${product.name}</strong></td>
+                                        <td>${product.sku}</td>
+                                        <td>${product.batchNumber || 'N/A'}</td>
+                                        <td>${new Date(product.expiryDate).toLocaleDateString('en-GB')}</td>
+                                        <td><span class="overdue-badge">${Math.abs(product.daysUntilExpiry)} days</span></td>
+                                        <td>${product.currentStock} units</td>
+                                        <td>${this.formatCurrency(product.sellingPrice * product.currentStock)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="pharmacySystem.removeExpiredProduct('${product.sku}')">
+                                                <i class="fas fa-trash"></i> Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${expiringSoon.length > 0 ? `
+                <div class="expiry-section warning-section">
+                    <h4><i class="fas fa-clock"></i> Expiring Soon - Within 30 Days (${expiringSoon.length})</h4>
+                    <div class="table-container">
+                        <table class="expiry-table warning">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Batch Number</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Until Expiry</th>
+                                    <th>Current Stock</th>
+                                    <th>Value at Risk</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expiringSoon.map(product => `
+                                    <tr>
+                                        <td><strong>${product.name}</strong></td>
+                                        <td>${product.sku}</td>
+                                        <td>${product.batchNumber || 'N/A'}</td>
+                                        <td>${new Date(product.expiryDate).toLocaleDateString('en-GB')}</td>
+                                        <td><span class="urgent-badge">${product.daysUntilExpiry} days</span></td>
+                                        <td>${product.currentStock} units</td>
+                                        <td>${this.formatCurrency(product.sellingPrice * product.currentStock)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning" onclick="pharmacySystem.prioritizeProduct('${product.sku}')">
+                                                <i class="fas fa-star"></i> Prioritize
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${expiringWithin60Days.length > 0 ? `
+                <div class="expiry-section caution-section">
+                    <h4><i class="fas fa-calendar-alt"></i> Expiring Within 60 Days (${expiringWithin60Days.length})</h4>
+                    <div class="table-container">
+                        <table class="expiry-table caution">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Batch Number</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Until Expiry</th>
+                                    <th>Current Stock</th>
+                                    <th>Value at Risk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expiringWithin60Days.map(product => `
+                                    <tr>
+                                        <td><strong>${product.name}</strong></td>
+                                        <td>${product.sku}</td>
+                                        <td>${product.batchNumber || 'N/A'}</td>
+                                        <td>${new Date(product.expiryDate).toLocaleDateString('en-GB')}</td>
+                                        <td><span class="caution-badge">${product.daysUntilExpiry} days</span></td>
+                                        <td>${product.currentStock} units</td>
+                                        <td>${this.formatCurrency(product.sellingPrice * product.currentStock)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${expiringWithin90Days.length > 0 ? `
+                <div class="expiry-section info-section">
+                    <h4><i class="fas fa-info-circle"></i> Expiring Within 90 Days (${expiringWithin90Days.length})</h4>
+                    <div class="table-container">
+                        <table class="expiry-table info">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Batch Number</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Until Expiry</th>
+                                    <th>Current Stock</th>
+                                    <th>Value at Risk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${expiringWithin90Days.map(product => `
+                                    <tr>
+                                        <td><strong>${product.name}</strong></td>
+                                        <td>${product.sku}</td>
+                                        <td>${product.batchNumber || 'N/A'}</td>
+                                        <td>${new Date(product.expiryDate).toLocaleDateString('en-GB')}</td>
+                                        <td><span class="info-badge">${product.daysUntilExpiry} days</span></td>
+                                        <td>${product.currentStock} units</td>
+                                        <td>${this.formatCurrency(product.sellingPrice * product.currentStock)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${noExpiryDate.length > 0 ? `
+                <div class="expiry-section neutral-section">
+                    <h4><i class="fas fa-question-circle"></i> Products Without Expiry Date (${noExpiryDate.length})</h4>
+                    <div class="table-container">
+                        <table class="expiry-table neutral">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Category</th>
+                                    <th>Current Stock</th>
+                                    <th>Total Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${noExpiryDate.map(product => `
+                                    <tr>
+                                        <td><strong>${product.name}</strong></td>
+                                        <td>${product.sku}</td>
+                                        <td>${product.category || 'N/A'}</td>
+                                        <td>${product.currentStock} units</td>
+                                        <td>${this.formatCurrency(product.sellingPrice * product.currentStock)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline" onclick="pharmacySystem.addExpiryDate('${product.sku}')">
+                                                <i class="fas fa-plus"></i> Add Expiry
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="expiry-recommendations">
+                    <h4><i class="fas fa-lightbulb"></i> Recommendations</h4>
+                    <div class="recommendations-grid">
+                        ${expiredCount > 0 ? `
+                        <div class="recommendation critical">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Immediate Action Required</h5>
+                            <p>You have ${expiredCount} expired products worth ${this.formatCurrency(expiredValue)}. Remove these products immediately to prevent dispensing expired medications.</p>
+                        </div>
+                        ` : ''}
+                        
+                        ${expiringSoonCount > 0 ? `
+                        <div class="recommendation warning">
+                            <h5><i class="fas fa-clock"></i> Urgent Attention</h5>
+                            <p>${expiringSoonCount} products are expiring within 30 days. Consider offering discounts or promotions to move these products quickly.</p>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="recommendation info">
+                            <h5><i class="fas fa-chart-line"></i> Inventory Management</h5>
+                            <p>Implement a first-in-first-out (FIFO) system to ensure older products are sold before newer ones.</p>
+                        </div>
+                        
+                        <div class="recommendation success">
+                            <h5><i class="fas fa-check-circle"></i> Best Practices</h5>
+                            <p>Regular expiry reports help prevent losses and ensure patient safety. Consider running this report weekly.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-footer">
+                    <div class="report-info">
+                        <p><strong>Report Generated:</strong> ${currentDate} at ${currentTime}</p>
+                        <p><strong>Pharmacy:</strong> ${pharmacyName}</p>
+                        <p><strong>Generated By:</strong> ${this.currentUser ? this.currentUser.name : 'System'}</p>
+                        <p><strong>Total Products Analyzed:</strong> ${totalProducts}</p>
+                        <p><strong>Products with Expiry Dates:</strong> ${productsWithExpiry}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.displayReport('Product Expiry Report', reportHTML);
+    }
+
+    // Helper methods for expiry report actions
+    removeExpiredProduct(sku) {
+        if (confirm('Are you sure you want to remove this expired product from inventory?')) {
+            const productIndex = this.products.findIndex(p => p.sku === sku);
+            if (productIndex !== -1) {
+                this.products.splice(productIndex, 1);
+                this.saveData('products', this.products);
+                this.showMessage('Expired product removed from inventory', 'success');
+                this.generateExpiryReport(); // Refresh the report
+            }
+        }
+    }
+
+    prioritizeProduct(sku) {
+        const product = this.products.find(p => p.sku === sku);
+        if (product) {
+            // You could implement prioritization logic here
+            this.showMessage(`Product ${product.name} marked for priority sale`, 'success');
+        }
+    }
+
+    addExpiryDate(sku) {
+        const product = this.products.find(p => p.sku === sku);
+        if (product) {
+            const expiryDate = prompt(`Enter expiry date for ${product.name} (YYYY-MM-DD):`);
+            if (expiryDate) {
+                const date = new Date(expiryDate);
+                if (!isNaN(date.getTime())) {
+                    product.expiryDate = date.toISOString().split('T')[0];
+                    this.saveData('products', this.products);
+                    this.showMessage('Expiry date added successfully', 'success');
+                    this.generateExpiryReport(); // Refresh the report
+                } else {
+                    this.showMessage('Invalid date format. Please use YYYY-MM-DD', 'error');
+                }
+            }
+        }
+    }
+
+    // ==================== ATTENDANCE TRACKING METHODS ====================
+
+    loadAttendance() {
+        this.updateClockDisplay();
+        this.loadTodayAttendance();
+        this.loadAttendanceData();
+        this.populateStaffFilter();
+        this.setupClockInterval();
+    }
+
+    setupClockInterval() {
+        // Clear existing interval
+        if (this.clockInterval) {
+            clearInterval(this.clockInterval);
+        }
+        
+        // Update clock every second
+        this.clockInterval = setInterval(() => {
+            this.updateClockDisplay();
+        }, 1000);
+    }
+
+    updateClockDisplay() {
+        const now = new Date();
+        const dateString = now.toLocaleDateString('en-GB', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        // Calculate countdown from 8 hours (28,800 seconds)
+        const countdownTime = this.calculateWorkShiftCountdown();
+        
+        // Update both attendance page and dashboard
+        const timeElement = document.getElementById('current-time');
+        const dateElement = document.getElementById('current-date');
+        const dashboardTimeElement = document.getElementById('dashboard-current-time');
+        const dashboardDateElement = document.getElementById('dashboard-current-date');
+        
+        if (timeElement) timeElement.textContent = countdownTime;
+        if (dateElement) dateElement.textContent = dateString;
+        if (dashboardTimeElement) dashboardTimeElement.textContent = countdownTime;
+        if (dashboardDateElement) dashboardDateElement.textContent = dateString;
+    }
+
+    calculateWorkShiftCountdown() {
+        if (!this.currentAttendance || !this.currentAttendance.clockInTime) {
+            return '08:00:00'; // Default 8 hours when not clocked in
+        }
+
+        const clockInTime = new Date(this.currentAttendance.clockInTime);
+        const now = new Date();
+        const elapsedMs = now - clockInTime;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        
+        // 8 hours = 28,800 seconds
+        const totalWorkSeconds = 8 * 60 * 60; // 28,800 seconds
+        const remainingSeconds = Math.max(0, totalWorkSeconds - elapsedSeconds);
+        
+        // If more than 8 hours have passed, show 0:00:00 (shift completed)
+        if (elapsedSeconds >= totalWorkSeconds) {
+            return '00:00:00';
+        }
+        
+        const hours = Math.floor(remainingSeconds / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+        
+        const timeString = remainingSeconds <= 0 ? '00:00:00' : 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Add visual indicators for low time
+        this.updateCountdownVisuals(remainingSeconds);
+        
+        // Show completion message when countdown reaches zero
+        if (remainingSeconds <= 0 && this.currentAttendance && !this.currentAttendance.clockOutTime) {
+            this.showShiftCompleteMessage();
+        }
+        
+        return timeString;
+    }
+
+    updateCountdownVisuals(remainingSeconds) {
+        const timeElements = [
+            document.getElementById('current-time'),
+            document.getElementById('dashboard-current-time')
+        ];
+        
+        timeElements.forEach(element => {
+            if (!element) return;
+            
+            // Remove existing classes
+            element.classList.remove('countdown-warning', 'countdown-critical', 'countdown-completed');
+            
+            // Add appropriate class based on remaining time
+            if (remainingSeconds <= 0) {
+                element.classList.add('countdown-completed');
+            } else if (remainingSeconds <= 1800) { // 30 minutes
+                element.classList.add('countdown-critical');
+            } else if (remainingSeconds <= 3600) { // 1 hour
+                element.classList.add('countdown-warning');
+            }
+        });
+    }
+
+    showShiftCompleteMessage() {
+        // Only show once per shift
+        if (this.shiftCompleteShown) return;
+        
+        this.shiftCompleteShown = true;
+        this.showMessage('🎉 Work shift completed! You can now clock out.', 'success');
+        
+        // Reset flag after 5 seconds
+        setTimeout(() => {
+            this.shiftCompleteShown = false;
+        }, 5000);
+    }
+
+    loadTodayAttendance() {
+        if (!this.currentUser) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const todayRecord = this.attendanceRecords.find(record => 
+            record.staffId === this.currentUser.id && 
+            record.date === today
+        );
+        
+        if (todayRecord) {
+            this.currentAttendance = todayRecord;
+            this.updateClockButtons(todayRecord.clockOutTime === null);
+            this.updateTodaySummary(todayRecord);
+        } else {
+            this.currentAttendance = null;
+            this.updateClockButtons(false);
+            this.updateTodaySummary(null);
+        }
+    }
+
+    updateClockButtons(isClockedIn) {
+        // Check if enough time has passed for next clock-in
+        const canClockIn = this.canClockInAgain();
+        
+        // Update attendance page buttons
+        const clockInBtn = document.getElementById('clock-in-btn');
+        const clockOutBtn = document.getElementById('clock-out-btn');
+        const statusIndicator = document.querySelector('#clock-status .status-indicator');
+        const statusText = document.querySelector('#clock-status .status-text');
+        
+        // Update dashboard buttons
+        const dashboardClockInBtn = document.getElementById('dashboard-clock-in-btn');
+        const dashboardClockOutBtn = document.getElementById('dashboard-clock-out-btn');
+        const dashboardStatusIndicator = document.querySelector('#dashboard-attendance-status .status-indicator');
+        const dashboardStatusText = document.querySelector('#dashboard-attendance-status .status-text');
+        
+        if (isClockedIn) {
+            // Attendance page
+            if (clockInBtn) clockInBtn.disabled = true;
+            if (clockOutBtn) clockOutBtn.disabled = false;
+            if (statusIndicator) statusIndicator.className = 'status-indicator online';
+            if (statusText) statusText.textContent = 'Clocked In';
+            
+            // Dashboard
+            if (dashboardClockInBtn) dashboardClockInBtn.disabled = true;
+            if (dashboardClockOutBtn) dashboardClockOutBtn.disabled = false;
+            if (dashboardStatusIndicator) dashboardStatusIndicator.className = 'status-indicator online';
+            if (dashboardStatusText) dashboardStatusText.textContent = 'Clocked In';
+        } else {
+            // Check if can clock in again
+            if (canClockIn.allowed) {
+                // Attendance page
+                if (clockInBtn) clockInBtn.disabled = false;
+                if (clockOutBtn) clockOutBtn.disabled = true;
+                if (statusIndicator) statusIndicator.className = 'status-indicator offline';
+                if (statusText) statusText.textContent = 'Not Clocked In';
+                
+                // Dashboard
+                if (dashboardClockInBtn) dashboardClockInBtn.disabled = false;
+                if (dashboardClockOutBtn) dashboardClockOutBtn.disabled = true;
+                if (dashboardStatusIndicator) dashboardStatusIndicator.className = 'status-indicator offline';
+                if (dashboardStatusText) dashboardStatusText.textContent = 'Not Clocked In';
+            } else {
+                // Show wait time
+                const waitText = `Wait ${canClockIn.remainingHours}h`;
+                
+                // Attendance page
+                if (clockInBtn) {
+                    clockInBtn.disabled = true;
+                    clockInBtn.textContent = waitText;
+                }
+                if (clockOutBtn) clockOutBtn.disabled = true;
+                if (statusIndicator) statusIndicator.className = 'status-indicator offline';
+                if (statusText) statusText.textContent = 'Not Clocked In';
+                
+                // Dashboard
+                if (dashboardClockInBtn) {
+                    dashboardClockInBtn.disabled = true;
+                    dashboardClockInBtn.textContent = waitText;
+                }
+                if (dashboardClockOutBtn) dashboardClockOutBtn.disabled = true;
+                if (dashboardStatusIndicator) dashboardStatusIndicator.className = 'status-indicator offline';
+                if (dashboardStatusText) dashboardStatusText.textContent = 'Not Clocked In';
+            }
+        }
+    }
+
+    canClockInAgain() {
+        if (!this.currentAttendance || !this.currentAttendance.clockInTime) {
+            return { allowed: true, remainingHours: 0 };
+        }
+
+        const lastClockIn = new Date(this.currentAttendance.clockInTime);
+        const now = new Date();
+        const timeSinceLastClockIn = now - lastClockIn;
+        const nineHoursInMs = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+        
+        if (timeSinceLastClockIn >= nineHoursInMs) {
+            return { allowed: true, remainingHours: 0 };
+        } else {
+            const remainingTime = nineHoursInMs - timeSinceLastClockIn;
+            const remainingHours = Math.ceil(remainingTime / (60 * 60 * 1000));
+            return { allowed: false, remainingHours: remainingHours };
+        }
+    }
+
+    updateTodaySummary(record) {
+        if (!record) {
+            // Update attendance page
+            document.getElementById('today-clock-in').textContent = '--:--';
+            document.getElementById('today-clock-out').textContent = '--:--';
+            document.getElementById('today-total-hours').textContent = '0h 0m';
+            document.getElementById('today-status').textContent = 'Not Started';
+            
+            // Update dashboard
+            document.getElementById('dashboard-today-clock-in').textContent = '--:--';
+            document.getElementById('dashboard-today-clock-out').textContent = '--:--';
+            document.getElementById('dashboard-today-hours').textContent = '0h 0m';
+            document.getElementById('dashboard-today-status').textContent = 'Not Started';
+            return;
+        }
+
+        const clockInTime = record.clockInTime ? 
+            new Date(record.clockInTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : 
+            '--:--';
+        
+        const clockOutTime = record.clockOutTime ? 
+            new Date(record.clockOutTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : 
+            '--:--';
+        
+        let totalHours = '0h 0m';
+        let status = 'Present';
+        
+        if (record.clockInTime) {
+            const endTime = record.clockOutTime ? new Date(record.clockOutTime) : new Date();
+            const startTime = new Date(record.clockInTime);
+            const diffMs = endTime - startTime;
+            
+            // Debug logging for troubleshooting
+            if (isNaN(diffMs) || diffMs < 0) {
+                console.warn('Invalid time calculation:', {
+                    clockInTime: record.clockInTime,
+                    clockOutTime: record.clockOutTime,
+                    startTime: startTime,
+                    endTime: endTime,
+                    diffMs: diffMs
+                });
+            }
+            
+            // Ensure we have valid numbers
+            if (!isNaN(diffMs) && diffMs >= 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                totalHours = `${diffHours}h ${diffMinutes}m`;
+            } else {
+                totalHours = '0h 0m';
+            }
+            
+            // Determine status
+            if (record.clockOutTime) {
+                status = 'Completed';
+            } else {
+                status = 'In Progress';
+            }
+        }
+        
+        // Update attendance page
+        document.getElementById('today-clock-in').textContent = clockInTime;
+        document.getElementById('today-clock-out').textContent = clockOutTime;
+        document.getElementById('today-total-hours').textContent = totalHours;
+        document.getElementById('today-status').textContent = status;
+        
+        // Update dashboard
+        document.getElementById('dashboard-today-clock-in').textContent = clockInTime;
+        document.getElementById('dashboard-today-clock-out').textContent = clockOutTime;
+        document.getElementById('dashboard-today-hours').textContent = totalHours;
+        document.getElementById('dashboard-today-status').textContent = status;
+    }
+
+    clockIn() {
+        if (!this.currentUser) {
+            this.showMessage('Please log in to clock in', 'error');
+            return;
+        }
+
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        
+        // Check if already clocked in today and not enough time has passed
+        if (this.currentAttendance && this.currentAttendance.clockInTime) {
+            const lastClockIn = new Date(this.currentAttendance.clockInTime);
+            const timeSinceLastClockIn = now - lastClockIn;
+            const nineHoursInMs = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+            
+            if (timeSinceLastClockIn < nineHoursInMs) {
+                const remainingTime = nineHoursInMs - timeSinceLastClockIn;
+                const remainingHours = Math.ceil(remainingTime / (60 * 60 * 1000));
+                this.showMessage(`Please wait ${remainingHours} more hour(s) before clocking in again`, 'error');
+                return;
+            }
+        }
+
+        // Create new attendance record or update existing one
+        if (this.currentAttendance && this.currentAttendance.clockInTime) {
+            // Update existing record for multiple clock-ins
+            this.currentAttendance.clockInTime = now.toISOString();
+            this.currentAttendance.clockOutTime = null;
+            this.currentAttendance.totalHours = 0;
+            this.currentAttendance.status = 'present';
+            this.currentAttendance.lastUpdated = now.toISOString();
+        } else {
+            // Create new attendance record
+            const attendanceRecord = {
+                id: this.generateAttendanceId(),
+                staffId: this.currentUser.id,
+                staffName: this.currentUser.name,
+                date: today,
+                clockInTime: now.toISOString(),
+                clockOutTime: null,
+                totalHours: 0,
+                status: 'present',
+                notes: '',
+                createdAt: now.toISOString(),
+                lastUpdated: now.toISOString()
+            };
+
+            this.attendanceRecords.push(attendanceRecord);
+            this.currentAttendance = attendanceRecord;
+        }
+
+        this.saveData('attendanceRecords', this.attendanceRecords);
+        
+        this.updateClockButtons(true);
+        this.updateTodaySummary(this.currentAttendance);
+        this.loadAttendanceData();
+        
+        // Hide clock warning when staff clocks in
+        this.hideClockWarning();
+        
+        // Show appropriate message based on whether this is a new clock-in or re-clock-in
+        if (this.currentAttendance && this.currentAttendance.lastUpdated) {
+            this.showMessage('Successfully clocked in for a new shift!', 'success');
+        } else {
+            this.showMessage('Successfully clocked in!', 'success');
+        }
+    }
+
+    clockOut() {
+        if (!this.currentAttendance || !this.currentAttendance.clockInTime) {
+            this.showMessage('You are not clocked in', 'error');
+            return;
+        }
+
+        const now = new Date();
+        const startTime = new Date(this.currentAttendance.clockInTime);
+        const diffMs = now - startTime;
+        const totalHours = diffMs / (1000 * 60 * 60); // Convert to hours
+
+        // Update attendance record
+        this.currentAttendance.clockOutTime = now.toISOString();
+        this.currentAttendance.totalHours = totalHours;
+        this.currentAttendance.status = 'present';
+
+        this.saveData('attendanceRecords', this.attendanceRecords);
+        
+        this.updateClockButtons(false);
+        this.updateTodaySummary(this.currentAttendance);
+        this.loadAttendanceData();
+        
+        this.showMessage('Successfully clocked out!', 'success');
+    }
+
+    generateAttendanceId() {
+        return 'ATT' + Date.now() + Math.random().toString(36).substr(2, 5);
+    }
+
+    loadAttendanceData() {
+        const tbody = document.getElementById('attendance-table-body');
+        if (!tbody) return;
+
+        // Filter attendance records based on current filters
+        let filteredRecords = [...this.attendanceRecords];
+        
+        // Apply date filter
+        const dateFrom = document.getElementById('attendance-date-from').value;
+        const dateTo = document.getElementById('attendance-date-to').value;
+        
+        if (dateFrom) {
+            filteredRecords = filteredRecords.filter(record => record.date >= dateFrom);
+        }
+        if (dateTo) {
+            filteredRecords = filteredRecords.filter(record => record.date <= dateTo);
+        }
+        
+        // Apply staff filter
+        const staffFilter = document.getElementById('attendance-staff-filter').value;
+        if (staffFilter) {
+            filteredRecords = filteredRecords.filter(record => record.staffId === staffFilter);
+        }
+        
+        // Apply status filter
+        const statusFilter = document.getElementById('attendance-status-filter').value;
+        if (statusFilter) {
+            filteredRecords = filteredRecords.filter(record => record.status === statusFilter);
+        }
+
+        // Sort by date (newest first)
+        filteredRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Generate table rows
+        tbody.innerHTML = filteredRecords.map(record => {
+            const clockInTime = record.clockInTime ? 
+                new Date(record.clockInTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : 
+                '--:--';
+            
+            const clockOutTime = record.clockOutTime ? 
+                new Date(record.clockOutTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : 
+                '--:--';
+            
+            const totalHours = record.totalHours ? 
+                `${Math.floor(record.totalHours)}h ${Math.floor((record.totalHours % 1) * 60)}m` : 
+                '--:--';
+            
+            const statusClass = record.status || 'absent';
+            
+            return `
+                <tr>
+                    <td><strong>${record.staffName}</strong></td>
+                    <td>${new Date(record.date).toLocaleDateString('en-GB')}</td>
+                    <td>${clockInTime}</td>
+                    <td>${clockOutTime}</td>
+                    <td>${totalHours}</td>
+                    <td><span class="attendance-status ${statusClass}">${statusClass}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="pharmacySystem.editAttendanceRecord('${record.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    populateStaffFilter() {
+        const staffFilter = document.getElementById('attendance-staff-filter');
+        if (!staffFilter) return;
+
+        // Clear existing options except "All Staff"
+        staffFilter.innerHTML = '<option value="">All Staff</option>';
+        
+        // Add staff options
+        this.staff.forEach(staffMember => {
+            const option = document.createElement('option');
+            option.value = staffMember.id;
+            option.textContent = staffMember.name;
+            staffFilter.appendChild(option);
+        });
+    }
+
+    applyAttendanceFilters() {
+        this.loadAttendanceData();
+    }
+
+    editAttendanceRecord(recordId) {
+        const record = this.attendanceRecords.find(r => r.id === recordId);
+        if (!record) return;
+
+        const newClockIn = prompt('Clock In Time (HH:MM):', 
+            record.clockInTime ? new Date(record.clockInTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '');
+        
+        if (newClockIn && newClockIn !== '') {
+            const [hours, minutes] = newClockIn.split(':');
+            const clockInDate = new Date(record.date);
+            clockInDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            record.clockInTime = clockInDate.toISOString();
+        }
+
+        const newClockOut = prompt('Clock Out Time (HH:MM) - Leave empty if still working:', 
+            record.clockOutTime ? new Date(record.clockOutTime).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '');
+        
+        if (newClockOut && newClockOut !== '') {
+            const [hours, minutes] = newClockOut.split(':');
+            const clockOutDate = new Date(record.date);
+            clockOutDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            record.clockOutTime = clockOutDate.toISOString();
+            
+            // Recalculate total hours
+            const startTime = new Date(record.clockInTime);
+            const endTime = new Date(record.clockOutTime);
+            record.totalHours = (endTime - startTime) / (1000 * 60 * 60);
+        } else {
+            record.clockOutTime = null;
+            record.totalHours = 0;
+        }
+
+        this.saveData('attendanceRecords', this.attendanceRecords);
+        this.loadAttendanceData();
+        this.showMessage('Attendance record updated successfully', 'success');
+    }
+
+    exportAttendanceData() {
+        const wb = XLSX.utils.book_new();
+        
+        // Export attendance records
+        const attendanceData = this.attendanceRecords.map(record => ({
+            'Staff Name': record.staffName,
+            'Date': new Date(record.date).toLocaleDateString('en-GB'),
+            'Clock In': record.clockInTime ? new Date(record.clockInTime).toLocaleTimeString('en-GB') : 'Not Clocked In',
+            'Clock Out': record.clockOutTime ? new Date(record.clockOutTime).toLocaleTimeString('en-GB') : 'Still Working',
+            'Total Hours': record.totalHours ? `${Math.floor(record.totalHours)}h ${Math.floor((record.totalHours % 1) * 60)}m` : '0h 0m',
+            'Status': record.status || 'absent',
+            'Notes': record.notes || ''
+        }));
+        
+        const attendanceWS = XLSX.utils.json_to_sheet(attendanceData);
+        attendanceWS['!cols'] = [
+            { wch: 20 }, // Staff Name
+            { wch: 12 }, // Date
+            { wch: 12 }, // Clock In
+            { wch: 12 }, // Clock Out
+            { wch: 12 }, // Total Hours
+            { wch: 12 }, // Status
+            { wch: 30 }  // Notes
+        ];
+        XLSX.utils.book_append_sheet(wb, attendanceWS, 'Attendance Records');
+        
+        // Add summary sheet
+        const summaryData = [
+            ['Attendance Summary'],
+            [''],
+            ['Total Records:', this.attendanceRecords.length],
+            ['Present Days:', this.attendanceRecords.filter(r => r.status === 'present').length],
+            ['Absent Days:', this.attendanceRecords.filter(r => r.status === 'absent').length],
+            ['Late Days:', this.attendanceRecords.filter(r => r.status === 'late').length],
+            [''],
+            ['Export Date:', new Date().toLocaleString('en-GB')],
+            ['Generated By:', this.currentUser ? this.currentUser.name : 'System']
+        ];
+        
+        const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+        summaryWS['!cols'] = [{ wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+        
+        // Generate filename and save
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `Attendance_Export_${timestamp}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showMessage('Attendance data exported successfully as Excel file!', 'success');
+    }
+
+    generateMonthlyAttendanceReport() {
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        const monthlyRecords = this.attendanceRecords.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+        });
+        
+        // Group by staff
+        const staffAttendance = {};
+        monthlyRecords.forEach(record => {
+            if (!staffAttendance[record.staffId]) {
+                staffAttendance[record.staffId] = {
+                    name: record.staffName,
+                    totalDays: 0,
+                    presentDays: 0,
+                    absentDays: 0,
+                    totalHours: 0
+                };
+            }
+            
+            staffAttendance[record.staffId].totalDays++;
+            if (record.status === 'present') {
+                staffAttendance[record.staffId].presentDays++;
+                staffAttendance[record.staffId].totalHours += record.totalHours || 0;
+            } else {
+                staffAttendance[record.staffId].absentDays++;
+            }
+        });
+        
+        const reportHTML = `
+            <div class="attendance-report">
+                <h3>Monthly Attendance Report - ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</h3>
+                <div class="report-summary">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Staff</span>
+                            <span class="summary-value">${Object.keys(staffAttendance).length}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Records</span>
+                            <span class="summary-value">${monthlyRecords.length}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Present Days</span>
+                            <span class="summary-value">${monthlyRecords.filter(r => r.status === 'present').length}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Absent Days</span>
+                            <span class="summary-value">${monthlyRecords.filter(r => r.status === 'absent').length}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="staff-attendance-table">
+                    <h4>Staff Performance</h4>
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Total Days</th>
+                                <th>Present Days</th>
+                                <th>Absent Days</th>
+                                <th>Attendance Rate</th>
+                                <th>Total Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.values(staffAttendance).map(staff => `
+                                <tr>
+                                    <td><strong>${staff.name}</strong></td>
+                                    <td>${staff.totalDays}</td>
+                                    <td>${staff.presentDays}</td>
+                                    <td>${staff.absentDays}</td>
+                                    <td>${staff.totalDays > 0 ? Math.round((staff.presentDays / staff.totalDays) * 100) : 0}%</td>
+                                    <td>${Math.floor(staff.totalHours)}h ${Math.floor((staff.totalHours % 1) * 60)}m</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        this.displayReport('Monthly Attendance Report', reportHTML);
+    }
+
+    generateStaffAttendanceReport() {
+        // This would generate individual staff performance reports
+        this.showMessage('Staff attendance report functionality would be implemented here', 'info');
+    }
+
+    generateOvertimeReport() {
+        // This would generate overtime reports
+        this.showMessage('Overtime report functionality would be implemented here', 'info');
+    }
+
+    // Clock-in Warning Methods
+    checkClockInStatus() {
+        if (!this.currentUser) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const lastWarningDate = this.loadData('lastWarningDate');
+        
+        // Reset warning dismissed flag if it's a new day
+        if (lastWarningDate !== today) {
+            this.clockWarningDismissed = false;
+            this.saveData('clockWarningDismissed', this.clockWarningDismissed);
+            this.saveData('lastWarningDate', today);
+        }
+        
+        const todayRecord = this.attendanceRecords.find(record => 
+            record.staffId === this.currentUser.id && 
+            record.date === today
+        );
+        
+        // Show warning if:
+        // 1. User is logged in
+        // 2. No attendance record for today OR no clock-in time
+        // 3. Warning hasn't been dismissed
+        const shouldShowWarning = this.currentUser && 
+            (!todayRecord || !todayRecord.clockInTime) && 
+            !this.clockWarningDismissed;
+            
+        if (shouldShowWarning) {
+            this.showClockWarning();
+        } else {
+            this.hideClockWarning();
+        }
+    }
+
+    showClockWarning() {
+        const warningFooter = document.getElementById('clock-warning-footer');
+        if (warningFooter) {
+            warningFooter.style.display = 'block';
+            document.body.classList.add('has-warning');
+        }
+    }
+
+    hideClockWarning() {
+        const warningFooter = document.getElementById('clock-warning-footer');
+        if (warningFooter) {
+            warningFooter.style.display = 'none';
+            document.body.classList.remove('has-warning');
+        }
+    }
+
+    goToDashboard() {
+        this.switchSection('dashboard');
+        this.hideClockWarning();
+    }
+
+    dismissWarning() {
+        this.clockWarningDismissed = true;
+        this.saveData('clockWarningDismissed', this.clockWarningDismissed);
+        this.hideClockWarning();
+    }
+
+    // ==================== CLINICAL DECISION SUPPORT SYSTEM METHODS ====================
+
+    loadOpenAIKey() {
+        const config = this.getOpenAIConfig();
+        if (config.apiKey) {
+            document.getElementById('openai-api-key').value = config.apiKey;
+            document.getElementById('openai-model').value = config.model;
+            document.getElementById('max-tokens').value = config.maxTokens;
+            document.getElementById('temperature').value = config.temperature;
+            document.getElementById('temperature-value').textContent = config.temperature;
+            this.updateAPIStatus(true, config);
+        } else {
+            this.updateAPIStatus(false);
+        }
+    }
+
+    getOpenAIConfig() {
+        return {
+            apiKey: localStorage.getItem('openai_api_key') || '',
+            model: localStorage.getItem('openai_model') || 'gpt-3.5-turbo',
+            maxTokens: parseInt(localStorage.getItem('openai_max_tokens')) || 1000,
+            temperature: parseFloat(localStorage.getItem('openai_temperature')) || 0.7,
+            lastTested: localStorage.getItem('openai_last_tested') || 'Never'
+        };
+    }
+
+    saveOpenAIConfig() {
+        const apiKey = document.getElementById('openai-api-key').value.trim();
+        const model = document.getElementById('openai-model').value;
+        const maxTokens = parseInt(document.getElementById('max-tokens').value);
+        const temperature = parseFloat(document.getElementById('temperature').value);
+
+        // Validate API key format
+        if (!apiKey) {
+            this.showMessage('Please enter a valid OpenAI API key', 'error');
+            return;
+        }
+
+        if (!apiKey.startsWith('sk-')) {
+            this.showMessage('API key should start with "sk-"', 'error');
+            return;
+        }
+
+        if (apiKey.length < 20) {
+            this.showMessage('API key appears to be too short', 'error');
+            return;
+        }
+
+        // Validate other parameters
+        if (maxTokens < 100 || maxTokens > 4000) {
+            this.showMessage('Max tokens must be between 100 and 4000', 'error');
+            return;
+        }
+
+        if (temperature < 0 || temperature > 1) {
+            this.showMessage('Temperature must be between 0 and 1', 'error');
+            return;
+        }
+
+        // Save configuration
+        localStorage.setItem('openai_api_key', apiKey);
+        localStorage.setItem('openai_model', model);
+        localStorage.setItem('openai_max_tokens', maxTokens.toString());
+        localStorage.setItem('openai_temperature', temperature.toString());
+
+        const config = { apiKey, model, maxTokens, temperature, lastTested: 'Never' };
+        this.updateAPIStatus(true, config);
+        this.showMessage('Configuration saved successfully!', 'success');
+    }
+
+    async testOpenAIKey() {
+        const config = this.getOpenAIConfig();
+        if (!config.apiKey) {
+            this.showMessage('Please enter an API key first', 'error');
+            return;
+        }
+
+        const testButton = document.getElementById('test-api-key');
+        const originalText = testButton.innerHTML;
+        testButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        testButton.disabled = true;
+
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: config.model,
+                    messages: [
+                        { role: 'user', content: 'Test connection' }
+                    ],
+                    max_tokens: 10,
+                    temperature: 0.1
+                })
+            });
+
+            if (response.ok) {
+                const lastTested = new Date().toLocaleString();
+                localStorage.setItem('openai_last_tested', lastTested);
+                config.lastTested = lastTested;
+                this.updateAPIStatus(true, config);
+                this.showMessage('API connection test successful!', 'success');
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+            }
+        } catch (error) {
+            this.showMessage(`API test failed: ${error.message}`, 'error');
+            this.updateAPIStatus(false);
+        } finally {
+            testButton.innerHTML = originalText;
+            testButton.disabled = false;
+        }
+    }
+
+    clearOpenAIKey() {
+        if (confirm('Are you sure you want to clear the API key and all configuration?')) {
+            localStorage.removeItem('openai_api_key');
+            localStorage.removeItem('openai_model');
+            localStorage.removeItem('openai_max_tokens');
+            localStorage.removeItem('openai_temperature');
+            localStorage.removeItem('openai_last_tested');
+            
+            document.getElementById('openai-api-key').value = '';
+            document.getElementById('openai-model').value = 'gpt-3.5-turbo';
+            document.getElementById('max-tokens').value = '1000';
+            document.getElementById('temperature').value = '0.7';
+            document.getElementById('temperature-value').textContent = '0.7';
+            
+            this.updateAPIStatus(false);
+            this.showMessage('Configuration cleared successfully!', 'success');
+        }
+    }
+
+    toggleAPIKeyVisibility() {
+        const input = document.getElementById('openai-api-key');
+        const button = document.getElementById('toggle-api-key');
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+
+    updateAPIStatus(isOnline, config = null) {
+        const indicator = document.getElementById('api-status-indicator');
+        const statusText = document.getElementById('api-status-text');
+        const apiDetails = document.getElementById('api-details');
+        
+        if (isOnline && config) {
+            indicator.className = 'status-indicator online';
+            statusText.textContent = 'API Connected';
+            apiDetails.style.display = 'block';
+            
+            document.getElementById('current-model').textContent = config.model;
+            document.getElementById('current-tokens').textContent = config.maxTokens;
+            document.getElementById('current-temperature').textContent = config.temperature;
+            document.getElementById('last-tested').textContent = config.lastTested;
+        } else {
+            indicator.className = 'status-indicator offline';
+            statusText.textContent = 'API Key Not Configured';
+            apiDetails.style.display = 'none';
+        }
+    }
+
+    async sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        
+        if (!message) {
+            this.showMessage('Please enter a message', 'error');
+            return;
+        }
+
+        const apiKey = localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+            this.showMessage('Please configure your OpenAI API key first', 'error');
+            return;
+        }
+
+        // Add user message to chat
+        this.addMessageToChat('user', message);
+        input.value = '';
+
+        // Show typing indicator
+        this.showTypingIndicator();
+
+        try {
+            // Get medicine context if enabled
+            let context = '';
+            if (document.getElementById('include-context').checked) {
+                context = this.getMedicineContext();
+            }
+
+            // Call OpenAI API
+            const response = await this.callOpenAIAPI(message, context);
+            
+            // Hide typing indicator
+            this.hideTypingIndicator();
+            
+            // Add assistant response to chat
+            this.addMessageToChat('assistant', response);
+            
+        } catch (error) {
+            this.hideTypingIndicator();
+            this.addMessageToChat('assistant', `Sorry, I encountered an error: ${error.message}. Please check your API key and try again.`);
+        }
+    }
+
+    async callOpenAIAPI(message, context) {
+        const config = this.getOpenAIConfig();
+        
+        if (!config.apiKey) {
+            throw new Error('OpenAI API key not configured');
+        }
+        
+        const systemPrompt = `You are a clinical decision support assistant for pharmacy staff. You help with:
+- Drug interactions and contraindications
+- Dosage recommendations and adjustments
+- Side effects and adverse reactions
+- Medication counseling points
+- Clinical guidelines and protocols
+- Drug information and pharmacology
+
+Always provide evidence-based, accurate information. If you're unsure about something, clearly state the limitations and recommend consulting with a pharmacist or healthcare provider.
+
+${context ? `Current medicine context: ${context}` : ''}
+
+Please provide helpful, professional, and accurate clinical guidance.`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            },
+            body: JSON.stringify({
+                model: config.model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: message }
+                ],
+                max_tokens: config.maxTokens,
+                temperature: config.temperature
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `API request failed: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    addMessageToChat(sender, content) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.innerHTML = `<p>${content.replace(/\n/g, '<br>')}</p>`;
+        
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(messageContent);
+        
+        // Remove welcome message if it exists
+        const welcomeMessage = chatMessages.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    showTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        indicator.style.display = 'flex';
+    }
+
+    hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        indicator.style.display = 'none';
+    }
+
+    clearChat() {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.innerHTML = `
+            <div class="welcome-message">
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <h4>Welcome to Clinical Decision Support System</h4>
+                        <p>I'm here to help you with clinical questions about medicines, drug interactions, dosages, contraindications, and more. Please ask me anything related to pharmacy practice.</p>
+                        <div class="quick-questions">
+                            <h5>Quick Questions:</h5>
+                            <div class="question-chips">
+                                <span class="question-chip" data-question="What are the common side effects of metformin?">Metformin side effects</span>
+                                <span class="question-chip" data-question="Can I take ibuprofen with warfarin?">Ibuprofen + Warfarin</span>
+                                <span class="question-chip" data-question="What is the recommended dosage for amoxicillin in adults?">Amoxicillin dosage</span>
+                                <span class="question-chip" data-question="What are the contraindications for ACE inhibitors?">ACE inhibitor contraindications</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    exportChat() {
+        const messages = document.querySelectorAll('.message');
+        
+        // Prepare chat data for Excel export
+        const chatData = [
+            ['Clinical Decision Support System - Chat Export'],
+            [''],
+            ['Timestamp', 'Sender', 'Message']
+        ];
+        
+        messages.forEach(message => {
+            const sender = message.classList.contains('user') ? 'User' : 'Assistant';
+            const content = message.querySelector('.message-content p')?.textContent || 'No content';
+            const timestamp = new Date().toLocaleString('en-GB');
+            
+            chatData.push([timestamp, sender, content]);
+        });
+        
+        // Add summary information
+        chatData.push(['']);
+        chatData.push(['Summary']);
+        chatData.push(['Total Messages:', messages.length]);
+        chatData.push(['User Messages:', messages.length - 1]); // Assuming first message is welcome
+        chatData.push(['Assistant Messages:', messages.length - (messages.length - 1)]);
+        chatData.push(['Export Date:', new Date().toLocaleString('en-GB')]);
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(chatData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 20 }, // Timestamp
+            { wch: 12 }, // Sender
+            { wch: 50 }  // Message
+        ];
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Chat Export');
+        
+        // Generate filename and save
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `Clinical_Chat_Export_${timestamp}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showMessage('Chat exported successfully as Excel file!', 'success');
+    }
+
+    searchMedicineForContext() {
+        const searchTerm = document.getElementById('medicine-search').value.trim().toLowerCase();
+        if (!searchTerm) {
+            this.showMessage('Please enter a medicine name to search', 'error');
+            return;
+        }
+
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const pharmacyProducts = this.products.filter(p => p.pharmacyId === currentPharmacyId);
+        
+        const foundMedicine = pharmacyProducts.find(product => 
+            product.name.toLowerCase().includes(searchTerm) ||
+            product.sku.toLowerCase().includes(searchTerm) ||
+            product.genericName.toLowerCase().includes(searchTerm)
+        );
+
+        const medicineInfo = document.getElementById('selected-medicine-info');
+        
+        if (foundMedicine) {
+            medicineInfo.innerHTML = `
+                <div class="medicine-details show">
+                    <h4>${foundMedicine.name}</h4>
+                    <div class="detail-item">
+                        <span class="detail-label">Generic Name:</span>
+                        <span class="detail-value">${foundMedicine.genericName || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">SKU:</span>
+                        <span class="detail-value">${foundMedicine.sku}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Category:</span>
+                        <span class="detail-value">${foundMedicine.category || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Price:</span>
+                        <span class="detail-value">${this.formatCurrency(foundMedicine.sellingPrice)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Stock:</span>
+                        <span class="detail-value">${foundMedicine.currentStock} units</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value">${foundMedicine.description || 'No description available'}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Store selected medicine for context
+            this.selectedMedicine = foundMedicine;
+            this.showMessage('Medicine context updated!', 'success');
+        } else {
+            medicineInfo.innerHTML = `
+                <p>No medicine found matching "${searchTerm}". Please try a different search term.</p>
+            `;
+            this.selectedMedicine = null;
+        }
+    }
+
+    getMedicineContext() {
+        if (!this.selectedMedicine) {
+            return '';
+        }
+
+        return `Selected Medicine: ${this.selectedMedicine.name} (${this.selectedMedicine.genericName || 'Generic name not available'}), SKU: ${this.selectedMedicine.sku}, Category: ${this.selectedMedicine.category || 'Not specified'}, Description: ${this.selectedMedicine.description || 'No description available'}`;
+    }
+
+    loadClinicalSupport() {
+        // Initialize clinical support system
+        this.loadOpenAIKey();
+        this.clearChat();
+        
+        // Reset medicine context
+        this.selectedMedicine = null;
+        document.getElementById('medicine-search').value = '';
+        document.getElementById('selected-medicine-info').innerHTML = `
+            <p>No medicine selected. Search for a medicine to provide context to the clinical assistant.</p>
+        `;
     }
 
     // Favorites functionality
@@ -6394,13 +8710,77 @@ class PharmacyManagementSystem {
     }
 
     exportComplianceCSV() {
-        const csvData = this.generateComplianceCSV();
-        this.downloadFile(csvData, 'rsd-compliance-report.csv', 'text/csv');
-        this.showMessage('Compliance report exported as CSV', 'success');
+        const wb = XLSX.utils.book_new();
+        
+        // Export audit trail data
+        const auditData = this.rsdData.auditTrail.map(entry => ({
+            'Timestamp': new Date(entry.timestamp).toLocaleString('en-GB'),
+            'Action': entry.action,
+            'User': entry.user,
+            'Details': JSON.stringify(entry.details)
+        }));
+        
+        const auditWS = XLSX.utils.json_to_sheet(auditData);
+        auditWS['!cols'] = [
+            { wch: 20 }, // Timestamp
+            { wch: 20 }, // Action
+            { wch: 15 }, // User
+            { wch: 40 }  // Details
+        ];
+        XLSX.utils.book_append_sheet(wb, auditWS, 'Audit Trail');
+        
+        // Export scanned boxes data
+        const boxesData = this.rsdData.scannedBoxes.map(box => ({
+            'Box ID': box.id,
+            'Product Name': box.productName,
+            'Batch Number': box.batchNumber,
+            'Expiry Date': box.expiryDate,
+            'Scanned Date': new Date(box.scannedDate).toLocaleDateString('en-GB'),
+            'Status': box.submitted ? 'Submitted' : 'Pending',
+            'Compliance Status': box.complianceStatus
+        }));
+        
+        const boxesWS = XLSX.utils.json_to_sheet(boxesData);
+        boxesWS['!cols'] = [
+            { wch: 15 }, // Box ID
+            { wch: 25 }, // Product Name
+            { wch: 15 }, // Batch Number
+            { wch: 12 }, // Expiry Date
+            { wch: 12 }, // Scanned Date
+            { wch: 12 }, // Status
+            { wch: 15 }  // Compliance Status
+        ];
+        XLSX.utils.book_append_sheet(wb, boxesWS, 'Scanned Boxes');
+        
+        // Add summary sheet
+        const summaryData = [
+            ['RSD Compliance Report Summary'],
+            [''],
+            ['Total Scanned Boxes:', this.rsdData.scannedBoxes.length],
+            ['Active Recalls:', this.rsdData.activeRecalls.length],
+            ['Flagged Issues:', this.rsdData.flaggedIssues.length],
+            ['Compliance Rate:', `${this.rsdData.complianceRate}%`],
+            ['Last Submission:', this.rsdData.lastSubmission ? new Date(this.rsdData.lastSubmission).toLocaleDateString('en-GB') : 'Never'],
+            [''],
+            ['Export Date:', new Date().toLocaleString('en-GB')],
+            ['Pharmacy:', this.currentPharmacy?.name || 'Unknown']
+        ];
+        
+        const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+        summaryWS['!cols'] = [{ wch: 25 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+        
+        // Generate filename and save
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `RSD_Compliance_Report_${timestamp}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showMessage('Compliance report exported as Excel file', 'success');
     }
 
     exportCompliancePDF() {
-        this.showMessage('PDF export functionality would be implemented here', 'info');
+        // Redirect to Excel export since we're converting all exports to Excel
+        this.exportComplianceCSV();
     }
 
     viewAuditTrail() {
@@ -6488,6 +8868,7 @@ class PharmacyManagementSystem {
             'discounts': ['view-discounts', 'manage-discounts'],
             'staff': ['view-staff', 'manage-staff'],
             'reports': ['view-reports'],
+            'attendance': ['view-attendance', 'manage-attendance'],
             'admin': ['admin-access']
         };
 
@@ -7203,7 +9584,12 @@ class PharmacyManagementSystem {
                 this.showMessage('Customer updated successfully!', 'success');
             }
         } else {
-            // Add new customer
+            // Add new customer with staff tracking
+            customerData.createdBy = {
+                staffId: this.currentUser?.id || 'unknown',
+                staffName: this.getStaffName(this.currentUser?.id || 'unknown'),
+                createdDate: new Date().toISOString()
+            };
             this.customers.push(customerData);
             this.showMessage('Customer added successfully!', 'success');
         }
@@ -7670,24 +10056,83 @@ class PharmacyManagementSystem {
     }
 
     exportLoyaltyData() {
-        const data = {
-            customers: this.customers,
-            transactions: this.loyaltyTransactions,
-            exportDate: new Date().toISOString(),
-            systemVersion: '1.0.0'
-        };
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `loyalty-data-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        this.showMessage('Loyalty data exported successfully!', 'success');
+        const wb = XLSX.utils.book_new();
+        
+        // Export customers data
+        const customersData = this.customers.map(customer => ({
+            'Customer ID': customer.id,
+            'Name': customer.name,
+            'Phone': customer.phone,
+            'Email': customer.email || '',
+            'Points': customer.points,
+            'Join Date': customer.joinDate ? new Date(customer.joinDate).toLocaleDateString('en-GB') : '',
+            'Last Activity': customer.lastActivity ? new Date(customer.lastActivity).toLocaleDateString('en-GB') : '',
+            'Created By': customer.createdBy ? customer.createdBy.staffName : 'System'
+        }));
+        
+        const customersWS = XLSX.utils.json_to_sheet(customersData);
+        customersWS['!cols'] = [
+            { wch: 12 }, // Customer ID
+            { wch: 20 }, // Name
+            { wch: 15 }, // Phone
+            { wch: 25 }, // Email
+            { wch: 10 }, // Points
+            { wch: 12 }, // Join Date
+            { wch: 12 }, // Last Activity
+            { wch: 15 }  // Created By
+        ];
+        XLSX.utils.book_append_sheet(wb, customersWS, 'Customers');
+        
+        // Export transactions data
+        const transactionsData = this.loyaltyTransactions.map(transaction => ({
+            'Transaction ID': transaction.id,
+            'Customer ID': transaction.customerId,
+            'Type': transaction.type,
+            'Points': transaction.points,
+            'Reason': transaction.reason,
+            'Notes': transaction.notes || '',
+            'Date': new Date(transaction.timestamp).toLocaleDateString('en-GB'),
+            'Time': new Date(transaction.timestamp).toLocaleTimeString('en-GB'),
+            'Staff ID': transaction.staffId
+        }));
+        
+        const transactionsWS = XLSX.utils.json_to_sheet(transactionsData);
+        transactionsWS['!cols'] = [
+            { wch: 15 }, // Transaction ID
+            { wch: 12 }, // Customer ID
+            { wch: 10 }, // Type
+            { wch: 10 }, // Points
+            { wch: 15 }, // Reason
+            { wch: 30 }, // Notes
+            { wch: 12 }, // Date
+            { wch: 12 }, // Time
+            { wch: 12 }  // Staff ID
+        ];
+        XLSX.utils.book_append_sheet(wb, transactionsWS, 'Transactions');
+        
+        // Add summary sheet
+        const summaryData = [
+            ['Loyalty Program Summary'],
+            [''],
+            ['Total Customers:', this.customers.length],
+            ['Total Transactions:', this.loyaltyTransactions.length],
+            ['Total Points Earned:', this.loyaltyTransactions.filter(t => t.type === 'earned').reduce((sum, t) => sum + t.points, 0)],
+            ['Total Points Redeemed:', this.loyaltyTransactions.filter(t => t.type === 'redeemed').reduce((sum, t) => sum + t.points, 0)],
+            [''],
+            ['Export Date:', new Date().toLocaleString('en-GB')],
+            ['System Version:', '1.0.0']
+        ];
+        
+        const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+        summaryWS['!cols'] = [{ wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+        
+        // Generate filename and save
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `Loyalty_Data_Export_${timestamp}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showMessage('Loyalty data exported successfully as Excel file!', 'success');
     }
 
     // Method to add points when customer makes a purchase (called from dispensing process)
@@ -7738,9 +10183,53 @@ class PharmacyManagementSystem {
             this.updateLoyaltyPreview();
             this.showMessage(`Customer found: ${customer.name}`, 'success');
         } else {
-            this.showMessage('Customer not found. Please check the phone number or add the customer first.', 'error');
-            this.clearDispensingCustomerInfo();
+            // Ask if user wants to create a new customer
+            const createNew = confirm(`Customer with phone ${phoneNumber} not found. Would you like to create a new customer?`);
+            if (createNew) {
+                this.createNewCustomerForDispensing(phoneNumber);
+            } else {
+                this.showMessage('Customer not found. Please check the phone number or add the customer first.', 'error');
+                this.clearDispensingCustomerInfo();
+            }
         }
+    }
+
+    createNewCustomerForDispensing(phoneNumber) {
+        const customerName = prompt('Enter customer name:');
+        if (!customerName) {
+            this.showMessage('Customer name is required', 'error');
+            return;
+        }
+
+        const customerEmail = prompt('Enter customer email (optional):') || '';
+        const customerAddress = prompt('Enter customer address (optional):') || '';
+
+        // Create new customer
+        const newCustomer = {
+            id: this.generateCustomerId(),
+            name: customerName,
+            phone: phoneNumber,
+            email: customerEmail,
+            address: customerAddress,
+            points: 0,
+            joinDate: new Date().toISOString(),
+            isNewCustomer: true, // Mark as new customer
+            createdBy: {
+                staffId: this.currentUser?.id || 'unknown',
+                staffName: this.getStaffName(this.currentUser?.id || 'unknown'),
+                createdDate: new Date().toISOString()
+            }
+        };
+
+        // Add to customers array
+        this.customers.push(newCustomer);
+        this.saveData('customers', this.customers);
+
+        // Set as selected customer
+        this.selectedDispensingCustomer = newCustomer;
+        this.displayDispensingCustomerInfo(newCustomer);
+        this.updateLoyaltyPreview();
+        this.showMessage(`New customer created: ${newCustomer.name}`, 'success');
     }
 
     displayDispensingCustomerInfo(customer) {
@@ -8124,6 +10613,10 @@ class PharmacyManagementSystem {
             finalTotal = this.appliedOffer.newTotal;
         }
 
+        // Get selected delivery method
+        const selectedDeliveryMethod = document.querySelector('input[name="delivery-method"]:checked');
+        const deliveryMethod = selectedDeliveryMethod ? selectedDeliveryMethod.value : 'pickup';
+
         // Create dispensing record
         const dispensingRecord = {
             id: this.generateDispensingId(),
@@ -8134,6 +10627,7 @@ class PharmacyManagementSystem {
             redemption: this.currentRedemption || null,
             discount: this.appliedDiscount || null,
             offer: this.appliedOffer || null,
+            deliveryMethod: deliveryMethod,
             staffId: this.currentUser?.id || 'unknown',
             pharmacyId: this.currentPharmacy?.id || 'unknown',
             customerId: this.selectedDispensingCustomer?.id || null,
@@ -8155,6 +10649,18 @@ class PharmacyManagementSystem {
         if (this.selectedDispensingCustomer) {
             const pointsEarned = Math.floor(finalTotal);
             this.addPointsFromPurchase(this.selectedDispensingCustomer.id, finalTotal);
+
+            // Track customer registration if this is a new customer added during dispensing
+            if (this.selectedDispensingCustomer.isNewCustomer) {
+                dispensingRecord.customerRegistration = {
+                    staffId: this.currentUser?.id || 'unknown',
+                    staffName: this.getStaffName(this.currentUser?.id || 'unknown'),
+                    customerId: this.selectedDispensingCustomer.id,
+                    customerName: this.selectedDispensingCustomer.name,
+                    customerPhone: this.selectedDispensingCustomer.phone,
+                    registrationDate: new Date().toISOString()
+                };
+            }
 
             // Update redemption transaction with dispensing ID
             if (this.currentRedemption) {
@@ -8207,6 +10713,11 @@ class PharmacyManagementSystem {
         
         const pointsEarned = this.selectedDispensingCustomer ? Math.floor(finalTotal) : 0;
         
+        // Get delivery method
+        const selectedDeliveryMethod = document.querySelector('input[name="delivery-method"]:checked');
+        const deliveryMethod = selectedDeliveryMethod ? selectedDeliveryMethod.value : 'pickup';
+        const deliveryMethodText = this.getDeliveryMethodText(deliveryMethod);
+        
         let receiptContent = `
             <div class="receipt">
                 <div class="receipt-header">
@@ -8214,6 +10725,7 @@ class PharmacyManagementSystem {
                     <p>Receipt #${this.generateDispensingId()}</p>
                     <p>Date: ${new Date().toLocaleString()}</p>
                     <p>Staff: ${this.currentUser?.name || 'Unknown'}</p>
+                    <p><strong>Delivery Method: ${deliveryMethodText}</strong></p>
                 </div>
                 
                 <div class="receipt-items">
@@ -8301,6 +10813,16 @@ class PharmacyManagementSystem {
 
         // Create and show receipt modal
         this.showReceiptModal(receiptContent);
+    }
+
+    getDeliveryMethodText(deliveryMethod) {
+        const deliveryMethods = {
+            'home-delivery': 'Home Delivery',
+            'pickup': 'Pickup',
+            'online-order': 'Online Order',
+            'delivery-app': 'Delivery App'
+        };
+        return deliveryMethods[deliveryMethod] || 'Pickup';
     }
 
     // ==================== DISCOUNT CODE METHODS ====================
