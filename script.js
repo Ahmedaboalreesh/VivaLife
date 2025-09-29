@@ -40,15 +40,27 @@ class PharmacyManagementSystem {
             auditTrail: this.loadData('rsdAuditTrail') || []
         };
         
+        // Loyalty Program data
+        this.customers = this.loadData('customers') || [];
+        this.loyaltyTransactions = this.loadData('loyaltyTransactions') || [];
+        this.selectedCustomer = null;
+        this.editingCustomer = null;
+        this.selectedDispensingCustomer = null;
+        this.currentRedemption = null;
+        this.appliedDiscount = null;
+        this.appliedOffer = null;
+        
+        // Discounts & Offers data
+        this.discounts = this.loadData('discounts') || [];
+        this.offers = this.loadData('offers') || [];
+        this.discountHistory = this.loadData('discountHistory') || [];
+        
         this.init();
     }
 
     init() {
         this.setupEventListeners();
         this.setupDefaultData();
-        this.loadDashboard();
-        this.loadInventory();
-        this.loadStaff();
         this.updateCurrencyDisplay();
         this.initializeLogin();
     }
@@ -493,6 +505,231 @@ class PharmacyManagementSystem {
         document.getElementById('require-password-change').addEventListener('change', (e) => {
             this.updateSystemSetting('requirePasswordChange', e.target.checked);
         });
+
+        // Loyalty Program functionality
+        document.getElementById('add-customer-btn').addEventListener('click', () => {
+            this.openCustomerModal();
+        });
+
+        document.getElementById('search-customer-btn').addEventListener('click', () => {
+            this.searchCustomers();
+        });
+
+        document.getElementById('customer-search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.searchCustomers();
+            }
+        });
+
+        document.getElementById('save-customer').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.saveCustomer();
+        });
+
+        document.getElementById('cancel-customer').addEventListener('click', () => {
+            this.closeModal('customer-modal');
+        });
+
+        document.getElementById('close-customer-modal').addEventListener('click', () => {
+            this.closeModal('customer-modal');
+        });
+
+        // Prevent form submission
+        document.getElementById('customer-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveCustomer();
+        });
+
+        document.getElementById('add-points-btn').addEventListener('click', () => {
+            this.openAddPointsModal();
+        });
+
+        document.getElementById('redeem-points-btn').addEventListener('click', () => {
+            this.openRedemptionSection();
+        });
+
+        document.getElementById('confirm-add-points').addEventListener('click', () => {
+            this.addPointsToCustomer();
+        });
+
+        document.getElementById('cancel-add-points').addEventListener('click', () => {
+            this.closeModal('add-points-modal');
+        });
+
+        document.getElementById('close-add-points-modal').addEventListener('click', () => {
+            this.closeModal('add-points-modal');
+        });
+
+        document.getElementById('redemption-amount').addEventListener('input', (e) => {
+            this.updateRedemptionPreview();
+        });
+
+        document.getElementById('confirm-redemption-btn').addEventListener('click', () => {
+            this.confirmRedemption();
+        });
+
+        document.getElementById('cancel-redemption-btn').addEventListener('click', () => {
+            this.closeRedemptionSection();
+        });
+
+        document.getElementById('customers-filter').addEventListener('input', (e) => {
+            this.filterCustomers(e.target.value);
+        });
+
+        document.getElementById('customers-sort').addEventListener('change', (e) => {
+            this.sortCustomers(e.target.value);
+        });
+
+        document.getElementById('generate-loyalty-report').addEventListener('click', () => {
+            this.generateLoyaltyReport();
+        });
+
+        document.getElementById('export-loyalty-data').addEventListener('click', () => {
+            this.exportLoyaltyData();
+        });
+
+        document.getElementById('refresh-loyalty-btn').addEventListener('click', () => {
+            this.loadLoyaltyProgram();
+        });
+
+        // Dispensing Loyalty functionality
+        document.getElementById('lookup-customer-btn').addEventListener('click', () => {
+            this.lookupCustomerForDispensing();
+        });
+
+        document.getElementById('customer-phone-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.lookupCustomerForDispensing();
+            }
+        });
+
+        document.getElementById('customer-phone-input').addEventListener('input', () => {
+            this.updateLoyaltyPreview();
+        });
+
+        // Dispensing Redemption functionality
+        document.getElementById('redeem-rewards-btn').addEventListener('click', () => {
+            this.openDispensingRedemptionModal();
+        });
+
+        document.getElementById('close-dispensing-redemption-modal').addEventListener('click', () => {
+            this.closeModal('dispensing-redemption-modal');
+        });
+
+        document.getElementById('cancel-dispensing-redemption').addEventListener('click', () => {
+            this.closeModal('dispensing-redemption-modal');
+        });
+
+        document.getElementById('redemption-points-amount').addEventListener('input', () => {
+            this.updateDispensingRedemptionPreview();
+        });
+
+        document.getElementById('confirm-dispensing-redemption').addEventListener('click', () => {
+            this.confirmDispensingRedemption();
+        });
+
+        // Clear cart functionality
+        document.getElementById('clear-cart-btn').addEventListener('click', () => {
+            this.clearCartWithConfirmation();
+        });
+
+        // Discount code functionality
+        document.getElementById('apply-discount-btn').addEventListener('click', () => {
+            this.applyDiscountCode();
+        });
+
+        document.getElementById('discount-code-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.applyDiscountCode();
+            }
+        });
+
+        document.getElementById('remove-discount-btn').addEventListener('click', () => {
+            this.removeDiscountCode();
+        });
+
+        // Apply offer functionality
+        document.getElementById('apply-offer-btn').addEventListener('click', () => {
+            this.openOfferSelectionModal();
+        });
+
+        document.getElementById('remove-offer-btn').addEventListener('click', () => {
+            this.removeAppliedOffer();
+        });
+
+        // Offer selection modal functionality
+        document.getElementById('close-offer-selection-modal').addEventListener('click', () => {
+            this.closeModal('offer-selection-modal');
+        });
+
+        document.getElementById('cancel-offer-selection').addEventListener('click', () => {
+            this.closeModal('offer-selection-modal');
+        });
+
+        document.getElementById('confirm-offer-selection').addEventListener('click', () => {
+            this.confirmOfferSelection();
+        });
+
+        // Discounts & Offers functionality
+        document.getElementById('add-discount-btn').addEventListener('click', () => {
+            this.openDiscountModal();
+        });
+
+        document.getElementById('add-offer-btn').addEventListener('click', () => {
+            this.openOfferModal();
+        });
+
+        document.getElementById('refresh-discounts-btn').addEventListener('click', () => {
+            this.loadDiscounts();
+        });
+
+        // Discount modal events
+        document.getElementById('close-discount-modal').addEventListener('click', () => {
+            this.closeModal('discount-modal');
+        });
+
+        document.getElementById('cancel-discount').addEventListener('click', () => {
+            this.closeModal('discount-modal');
+        });
+
+        document.getElementById('save-discount').addEventListener('click', () => {
+            this.saveDiscount();
+        });
+
+        // Offer modal events
+        document.getElementById('close-offer-modal').addEventListener('click', () => {
+            this.closeModal('offer-modal');
+        });
+
+        document.getElementById('cancel-offer').addEventListener('click', () => {
+            this.closeModal('offer-modal');
+        });
+
+        document.getElementById('save-offer').addEventListener('click', () => {
+            this.saveOffer();
+        });
+
+        // History filters
+        document.getElementById('discount-history-filter').addEventListener('change', () => {
+            this.filterDiscountHistory();
+        });
+
+        document.getElementById('discount-date-from').addEventListener('change', () => {
+            this.filterDiscountHistory();
+        });
+
+        document.getElementById('discount-date-to').addEventListener('change', () => {
+            this.filterDiscountHistory();
+        });
+
+        // Product selection buttons (will be added when modal opens)
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'select-all-products') {
+                this.selectAllProducts();
+            } else if (e.target.id === 'clear-all-products') {
+                this.clearAllProducts();
+            }
+        });
     }
 
     switchSection(sectionName) {
@@ -530,6 +767,12 @@ class PharmacyManagementSystem {
                 break;
             case 'rsd-tracking':
                 this.loadRSDTracking();
+                break;
+            case 'loyalty':
+                this.loadLoyaltyProgram();
+                break;
+            case 'discounts':
+                this.loadDiscounts();
                 break;
             case 'admin':
                 this.loadAdmin();
@@ -577,9 +820,11 @@ class PharmacyManagementSystem {
     getDispensedToday(dispensingHistory = null) {
         const today = new Date().toDateString();
         const history = dispensingHistory || this.dispensingHistory;
-        return history.filter(record => 
-            new Date(record.date).toDateString() === today
-        ).length;
+        return history.filter(record => {
+            // Handle both old format (date) and new format (timestamp)
+            const recordDate = record.timestamp ? record.timestamp : record.date;
+            return new Date(recordDate).toDateString() === today;
+        }).length;
     }
 
     createDispensingChart() {
@@ -692,9 +937,10 @@ class PharmacyManagementSystem {
             date.setDate(date.getDate() - i);
             const dateString = date.toDateString();
             
-            const count = history.filter(record => 
-                new Date(record.date).toDateString() === dateString
-            ).length;
+            const count = history.filter(record => {
+                const recordDate = record.timestamp ? record.timestamp : record.date;
+                return new Date(recordDate).toDateString() === dateString;
+            }).length;
             
             days.push({
                 date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -1464,6 +1710,12 @@ class PharmacyManagementSystem {
 
     removeFromCart(sku) {
         this.cart = this.cart.filter(item => item.sku !== sku);
+        
+        // If cart becomes empty and there's an active redemption, restore points
+        if (this.cart.length === 0 && this.currentRedemption) {
+            this.restoreRedemptionPoints();
+        }
+        
         this.renderCart();
     }
 
@@ -1499,91 +1751,90 @@ class PharmacyManagementSystem {
             return;
         }
 
-        cartItems.innerHTML = this.cart.map(item => `
-            <div class="cart-item">
-                <div class="cart-item-info">
-                    <div class="cart-item-name">${item.name}</div>
-                    <div class="cart-item-price">${this.formatCurrency(item.price)} each</div>
-                </div>
-                <div class="cart-item-controls">
-                    <div class="quantity-control">
-                        <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity - 1})">-</button>
-                        <span>${item.quantity}</span>
-                        <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity + 1})">+</button>
+        // Calculate discount per item if redemption is active
+        let discountPerItem = 0;
+        if (this.currentRedemption && this.cart.length > 0) {
+            const totalOriginalValue = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            discountPerItem = this.currentRedemption.discountAmount / totalOriginalValue;
+        }
+
+        cartItems.innerHTML = this.cart.map(item => {
+            const itemTotal = item.price * item.quantity;
+            const itemDiscount = itemTotal * discountPerItem;
+            const discountedItemTotal = itemTotal - itemDiscount;
+            const discountedItemPrice = item.price - (item.price * discountPerItem);
+
+            return `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.name}</div>
+                        <div class="cart-item-price">
+                            ${this.currentRedemption ? 
+                                `<span class="original-price">${this.formatCurrency(item.price)}</span> → <span class="discounted-price">${this.formatCurrency(discountedItemPrice)}</span> each` :
+                                `${this.formatCurrency(item.price)} each`
+                            }
+                        </div>
+                        <div class="cart-item-total">
+                            ${this.currentRedemption ? 
+                                `<span class="original-total">${this.formatCurrency(itemTotal)}</span> → <span class="discounted-total">${this.formatCurrency(discountedItemTotal)}</span>` :
+                                `${this.formatCurrency(itemTotal)}`
+                            }
+                        </div>
                     </div>
-                    <button class="btn btn-sm btn-danger" onclick="pharmacySystem.removeFromCart('${item.sku}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="cart-item-controls">
+                        <div class="quantity-control">
+                            <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity - 1})">-</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="pharmacySystem.updateQuantity('${item.sku}', ${item.quantity + 1})">+</button>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="pharmacySystem.removeFromCart('${item.sku}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         const totalItems = this.cart.reduce((sum, item) => sum + item.quantity, 0);
         const totalValue = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
         cartCount.textContent = totalItems;
-        cartTotal.textContent = this.formatCurrency(totalValue);
-    }
-
-    processDispensing() {
-        if (this.cart.length === 0) {
-            this.showMessage('Cart is empty!', 'error');
-            return;
-        }
-
-        // Show loading state
-        const processBtn = document.getElementById('process-dispense');
-        const originalText = processBtn.innerHTML;
-        processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        processBtn.disabled = true;
-
-        // Update inventory
-        this.cart.forEach(cartItem => {
-            const product = this.products.find(p => p.sku === cartItem.sku);
-            if (product) {
-                product.currentStock -= cartItem.quantity;
-            }
-        });
-
-        // Record dispensing
-        const dispensingRecord = {
-            id: 'DSP' + Date.now(),
-            invoiceNumber: 'INV' + Date.now(),
-            date: new Date().toISOString(),
-            items: this.cart.map(item => ({
-                productId: item.productId,
-                sku: item.sku,
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price
-            })),
-            totalValue: this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-            staffId: this.currentUser?.id || 'Unknown',
-            staffName: this.currentUser?.name || 'Unknown',
-            pharmacyId: this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001'
-        };
-
-        this.dispensingHistory.push(dispensingRecord);
-
-        // Save data
-        this.saveData('products', this.products);
-        this.saveData('dispensingHistory', this.dispensingHistory);
-
-        // Print receipt before clearing cart
-        this.showMessage('Generating receipt...', 'info');
-        this.printReceiptFromCart(this.cart);
-
-        // Clear cart
-        this.cart = [];
-        this.renderCart();
-
-        this.showMessage(`Successfully dispensed ${dispensingRecord.items.length} items!`, 'success');
-        this.loadDashboard();
         
-        // Reset button
-        processBtn.innerHTML = originalText;
-        processBtn.disabled = false;
+        // Show total with discounts/redemption/offers if applicable
+        if (this.currentRedemption || this.appliedDiscount || this.appliedOffer) {
+            let finalTotal = totalValue;
+            let discountInfo = '';
+
+            if (this.currentRedemption) {
+                finalTotal = this.currentRedemption.newTotal;
+                discountInfo += `<div class="discount">Points Redeemed: ${this.currentRedemption.pointsRedeemed} (${this.formatCurrency(this.currentRedemption.discountAmount)} discount)</div>`;
+            }
+
+            if (this.appliedDiscount) {
+                finalTotal = this.appliedDiscount.newTotal;
+                discountInfo += `<div class="discount">Discount Code: ${this.appliedDiscount.name} (${this.formatCurrency(this.appliedDiscount.appliedAmount)} discount)</div>`;
+            }
+
+            if (this.appliedOffer) {
+                finalTotal = this.appliedOffer.newTotal;
+                discountInfo += `<div class="discount">Offer: ${this.appliedOffer.name} (${this.formatCurrency(this.appliedOffer.appliedSavings)} savings)</div>`;
+            }
+
+            cartTotal.innerHTML = `
+                <div class="cart-total-with-redemption">
+                    <div class="original-total">Original: ${this.formatCurrency(totalValue)}</div>
+                    ${discountInfo}
+                    <div class="final-total">Total: ${this.formatCurrency(finalTotal)}</div>
+                </div>
+            `;
+        } else {
+            cartTotal.textContent = this.formatCurrency(totalValue);
+        }
+        
+        // Update loyalty preview
+        this.updateLoyaltyPreview();
     }
+
 
     printReceipt() {
         if (this.cart.length === 0) {
@@ -3008,6 +3259,65 @@ class PharmacyManagementSystem {
             this.saveData('staff', this.staff);
         }
 
+        // Setup default privileges if none exist
+        if (this.privileges.length === 0) {
+            this.privileges = [
+                {
+                    id: 'admin',
+                    name: 'Administrator',
+                    description: 'Full system access',
+                    permissions: [
+                        'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
+                        'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
+                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'manage-staff',
+                        'view-reports', 'admin-access', 'export-data', 'import-data'
+                    ],
+                    isDefault: true
+                },
+                {
+                    id: 'pharmacy-supervisor',
+                    name: 'Pharmacy Supervisor',
+                    description: 'Supervisor level access',
+                    permissions: [
+                        'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
+                        'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
+                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'view-reports', 'export-data'
+                    ],
+                    isDefault: true
+                },
+                {
+                    id: 'pharmacy-staff',
+                    name: 'Pharmacy Staff',
+                    description: 'Standard staff access',
+                    permissions: [
+                        'view-dashboard', 'view-inventory', 'add-products', 'edit-products',
+                        'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
+                        'view-loyalty', 'manage-loyalty', 'view-discounts', 'view-reports'
+                    ],
+                    isDefault: true
+                },
+                {
+                    id: 'warehouse-assistant',
+                    name: 'Warehouse Assistant',
+                    description: 'Limited access for warehouse operations',
+                    permissions: [
+                        'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'view-reports'
+                    ],
+                    isDefault: true
+                },
+                {
+                    id: 'data-entry',
+                    name: 'Data Entry',
+                    description: 'Data entry access only',
+                    permissions: [
+                        'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'view-reports'
+                    ],
+                    isDefault: true
+                }
+            ];
+            this.saveData('privileges', this.privileges);
+        }
+
         if (!this.currentUser) {
             this.currentUser = this.staff[0];
             this.saveData('currentUser', this.currentUser);
@@ -3126,6 +3436,10 @@ class PharmacyManagementSystem {
 
     closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
+    }
+
+    openModal(modalId) {
+        document.getElementById(modalId).style.display = 'block';
     }
 
     showMessage(message, type = 'info') {
@@ -3345,6 +3659,12 @@ class PharmacyManagementSystem {
         document.getElementById('login-page').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
         this.updateCurrentUserDisplay();
+        
+        // Initialize access control
+        this.initializeAccessControl();
+        
+        // Ensure dashboard is the active section
+        this.switchSection('dashboard');
     }
 
     populateLoginPharmacyDropdown() {
@@ -4522,9 +4842,10 @@ class PharmacyManagementSystem {
 
         if (dateFilter) {
             const filterDate = new Date(dateFilter).toDateString();
-            filteredHistory = this.returnHistory.filter(record => 
-                new Date(record.date).toDateString() === filterDate
-            );
+            filteredHistory = this.returnHistory.filter(record => {
+                const recordDate = record.timestamp ? record.timestamp : record.date;
+                return new Date(recordDate).toDateString() === filterDate;
+            });
         }
 
         if (filteredHistory.length === 0) {
@@ -4543,7 +4864,7 @@ class PharmacyManagementSystem {
                         <div class="return-history-details">
                             <span>${record.totalItems} items</span>
                             <span>${this.formatCurrency(record.totalValue)}</span>
-                            <span class="return-history-date">${new Date(record.date).toLocaleString()}</span>
+                            <span class="return-history-date">${new Date(record.timestamp || record.date).toLocaleString()}</span>
                         </div>
                     </div>
                     <div class="return-status ${record.status}">
@@ -4771,7 +5092,7 @@ class PharmacyManagementSystem {
                 <tbody>
                     ${dispensingHistory.slice(-20).reverse().map(record => `
                         <tr>
-                            <td>${new Date(record.date).toLocaleString('en-GB')}</td>
+                            <td>${new Date(record.timestamp || record.date).toLocaleString('en-GB')}</td>
                             <td>${record.items.length}</td>
                             <td>${this.formatCurrency(record.totalValue)}</td>
                             <td>${this.getStaffName(record.staffId)}</td>
@@ -6163,6 +6484,8 @@ class PharmacyManagementSystem {
             'dispensing': ['process-dispensing'],
             'returns': ['process-returns'],
             'rsd-tracking': ['view-rsd-tracking'],
+            'loyalty': ['view-loyalty', 'manage-loyalty'],
+            'discounts': ['view-discounts', 'manage-discounts'],
             'staff': ['view-staff', 'manage-staff'],
             'reports': ['view-reports'],
             'admin': ['admin-access']
@@ -6809,6 +7132,1963 @@ class PharmacyManagementSystem {
                 </td>
             </tr>
         `).join('');
+    }
+
+    // ==================== LOYALTY PROGRAM METHODS ====================
+
+    loadLoyaltyProgram() {
+        this.updateLoyaltyStats();
+        this.renderCustomersTable();
+        this.loadTopCustomers();
+        this.loadRecentRedemptions();
+    }
+
+    updateLoyaltyStats() {
+        const totalCustomers = this.customers.length;
+        const totalPointsIssued = this.loyaltyTransactions
+            .filter(t => t.type === 'earned')
+            .reduce((sum, t) => sum + t.points, 0);
+        const totalPointsRedeemed = this.loyaltyTransactions
+            .filter(t => t.type === 'redeemed')
+            .reduce((sum, t) => sum + t.points, 0);
+        const totalDiscountsGiven = this.loyaltyTransactions
+            .filter(t => t.type === 'redeemed')
+            .reduce((sum, t) => sum + t.discountAmount, 0);
+
+        document.getElementById('total-customers').textContent = totalCustomers;
+        document.getElementById('total-points-issued').textContent = totalPointsIssued.toLocaleString();
+        document.getElementById('total-points-redeemed').textContent = totalPointsRedeemed.toLocaleString();
+        document.getElementById('total-discounts-given').textContent = `ر.س${totalDiscountsGiven.toFixed(2)}`;
+    }
+
+    openCustomerModal() {
+        this.editingCustomer = null;
+        document.getElementById('customer-modal-title').textContent = 'Add New Customer';
+        document.getElementById('customer-form').reset();
+        document.getElementById('customer-id-input').placeholder = 'Auto-generated if left empty';
+        this.openModal('customer-modal');
+    }
+
+    saveCustomer() {
+        const form = document.getElementById('customer-form');
+        if (!form) {
+            this.showMessage('Form not found!', 'error');
+            return;
+        }
+        
+        const customerData = {
+            id: document.getElementById('customer-id-input').value || this.generateCustomerId(),
+            name: document.getElementById('customer-name').value,
+            phone: document.getElementById('customer-phone').value,
+            email: document.getElementById('customer-email').value,
+            address: document.getElementById('customer-address').value,
+            dateOfBirth: document.getElementById('customer-date-of-birth').value,
+            gender: document.getElementById('customer-gender').value,
+            notes: document.getElementById('customer-notes').value,
+            points: 0,
+            joinDate: new Date().toISOString(),
+            lastActivity: new Date().toISOString()
+        };
+
+        if (!customerData.name || !customerData.phone) {
+            this.showMessage('Name and phone number are required!', 'error');
+            return;
+        }
+
+        if (this.editingCustomer) {
+            // Update existing customer
+            const index = this.customers.findIndex(c => c.id === this.editingCustomer.id);
+            if (index !== -1) {
+                this.customers[index] = { ...this.customers[index], ...customerData };
+                this.showMessage('Customer updated successfully!', 'success');
+            }
+        } else {
+            // Add new customer
+            this.customers.push(customerData);
+            this.showMessage('Customer added successfully!', 'success');
+        }
+
+        this.saveData('customers', this.customers);
+        this.closeModal('customer-modal');
+        this.loadLoyaltyProgram();
+    }
+
+    generateCustomerId() {
+        const prefix = 'CUST';
+        const timestamp = Date.now().toString().slice(-6);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `${prefix}${timestamp}${random}`;
+    }
+
+    searchCustomers() {
+        const query = document.getElementById('customer-search').value.toLowerCase();
+        const results = this.customers.filter(customer => 
+            customer.name.toLowerCase().includes(query) ||
+            customer.phone.includes(query) ||
+            customer.id.toLowerCase().includes(query)
+        );
+
+        this.displayCustomerSearchResults(results);
+    }
+
+    displayCustomerSearchResults(customers) {
+        const container = document.getElementById('customer-search-results');
+        
+        if (customers.length === 0) {
+            container.innerHTML = '<div class="no-results">No customers found</div>';
+            return;
+        }
+
+        container.innerHTML = customers.map(customer => `
+            <div class="customer-result-item" onclick="pharmacySystem.selectCustomer('${customer.id}')">
+                <div class="customer-info">
+                    <h4>${customer.name}</h4>
+                    <p>ID: ${customer.id} | Phone: ${customer.phone}</p>
+                    <p>Points: ${customer.points} | Joined: ${new Date(customer.joinDate).toLocaleDateString()}</p>
+                </div>
+                <div class="customer-actions">
+                    <button class="btn btn-sm btn-primary">Select</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    selectCustomer(customerId) {
+        this.selectedCustomer = this.customers.find(c => c.id === customerId);
+        if (this.selectedCustomer) {
+            this.displayCustomerDetails();
+            document.getElementById('customer-search-results').innerHTML = '';
+            document.getElementById('customer-search').value = '';
+        }
+    }
+
+    displayCustomerDetails() {
+        if (!this.selectedCustomer) return;
+
+        document.getElementById('selected-customer-name').textContent = this.selectedCustomer.name;
+        document.getElementById('customer-id').textContent = this.selectedCustomer.id;
+        document.getElementById('customer-phone-display').textContent = this.selectedCustomer.phone;
+        document.getElementById('customer-email-display').textContent = this.selectedCustomer.email || '-';
+        document.getElementById('customer-join-date').textContent = new Date(this.selectedCustomer.joinDate).toLocaleDateString();
+        document.getElementById('customer-points').textContent = this.selectedCustomer.points;
+
+        document.getElementById('customer-details-section').style.display = 'block';
+    }
+
+    openAddPointsModal() {
+        if (!this.selectedCustomer) {
+            this.showMessage('Please select a customer first!', 'error');
+            return;
+        }
+        this.openModal('add-points-modal');
+    }
+
+    addPointsToCustomer() {
+        if (!this.selectedCustomer) return;
+
+        const points = parseInt(document.getElementById('points-amount').value);
+        const reason = document.getElementById('points-reason').value;
+        const notes = document.getElementById('points-notes').value;
+
+        if (!points || points <= 0) {
+            this.showMessage('Please enter a valid points amount!', 'error');
+            return;
+        }
+
+        if (!reason) {
+            this.showMessage('Please select a reason!', 'error');
+            return;
+        }
+
+        // Add points to customer
+        this.selectedCustomer.points += points;
+        this.selectedCustomer.lastActivity = new Date().toISOString();
+
+        // Record transaction
+        const transaction = {
+            id: this.generateTransactionId(),
+            customerId: this.selectedCustomer.id,
+            type: 'earned',
+            points: points,
+            reason: reason,
+            notes: notes,
+            timestamp: new Date().toISOString(),
+            staffId: this.currentUser?.id || 'system'
+        };
+
+        this.loyaltyTransactions.push(transaction);
+
+        this.saveData('customers', this.customers);
+        this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+        this.showMessage(`${points} points added to ${this.selectedCustomer.name}!`, 'success');
+        this.closeModal('add-points-modal');
+        this.displayCustomerDetails();
+        this.updateLoyaltyStats();
+    }
+
+    generateTransactionId() {
+        return 'TXN' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
+    }
+
+    openRedemptionSection() {
+        if (!this.selectedCustomer) {
+            this.showMessage('Please select a customer first!', 'error');
+            return;
+        }
+
+        if (this.selectedCustomer.points < 100) {
+            this.showMessage('Customer needs at least 100 points to redeem!', 'error');
+            return;
+        }
+
+        document.getElementById('redemption-section').style.display = 'block';
+        document.getElementById('redemption-amount').max = this.selectedCustomer.points;
+        this.updateRedemptionPreview();
+    }
+
+    updateRedemptionPreview() {
+        if (!this.selectedCustomer) return;
+
+        const pointsToRedeem = parseInt(document.getElementById('redemption-amount').value) || 0;
+        const discountAmount = (pointsToRedeem / 100) * 2; // 100 points = 2 SAR
+        const remainingPoints = this.selectedCustomer.points - pointsToRedeem;
+
+        document.getElementById('preview-points').textContent = pointsToRedeem;
+        document.getElementById('preview-discount').textContent = `ر.س${discountAmount.toFixed(2)}`;
+        document.getElementById('preview-remaining').textContent = remainingPoints;
+    }
+
+    confirmRedemption() {
+        if (!this.selectedCustomer) return;
+
+        const pointsToRedeem = parseInt(document.getElementById('redemption-amount').value);
+        const discountAmount = (pointsToRedeem / 100) * 2;
+
+        if (pointsToRedeem < 100) {
+            this.showMessage('Minimum 100 points required for redemption!', 'error');
+            return;
+        }
+
+        if (pointsToRedeem > this.selectedCustomer.points) {
+            this.showMessage('Not enough points available!', 'error');
+            return;
+        }
+
+        // Deduct points from customer
+        this.selectedCustomer.points -= pointsToRedeem;
+        this.selectedCustomer.lastActivity = new Date().toISOString();
+
+        // Record transaction
+        const transaction = {
+            id: this.generateTransactionId(),
+            customerId: this.selectedCustomer.id,
+            type: 'redeemed',
+            points: pointsToRedeem,
+            discountAmount: discountAmount,
+            reason: 'points_redemption',
+            notes: `Redeemed ${pointsToRedeem} points for ${discountAmount.toFixed(2)} SAR discount`,
+            timestamp: new Date().toISOString(),
+            staffId: this.currentUser?.id || 'system'
+        };
+
+        this.loyaltyTransactions.push(transaction);
+
+        this.saveData('customers', this.customers);
+        this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+        this.showMessage(`${pointsToRedeem} points redeemed for ر.س${discountAmount.toFixed(2)} discount!`, 'success');
+        this.closeRedemptionSection();
+        this.displayCustomerDetails();
+        this.updateLoyaltyStats();
+    }
+
+    closeRedemptionSection() {
+        document.getElementById('redemption-section').style.display = 'none';
+        document.getElementById('redemption-amount').value = '';
+    }
+
+    renderCustomersTable() {
+        const tbody = document.getElementById('customers-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = this.customers.map(customer => `
+            <tr>
+                <td>${customer.id}</td>
+                <td>${customer.name}</td>
+                <td>${customer.phone}</td>
+                <td>${customer.email || '-'}</td>
+                <td><span class="points-badge">${customer.points}</span></td>
+                <td>${new Date(customer.joinDate).toLocaleDateString()}</td>
+                <td>${new Date(customer.lastActivity).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline" onclick="pharmacySystem.selectCustomer('${customer.id}')">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editCustomer('${customer.id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    editCustomer(customerId) {
+        this.editingCustomer = this.customers.find(c => c.id === customerId);
+        if (this.editingCustomer) {
+            document.getElementById('customer-modal-title').textContent = 'Edit Customer';
+            document.getElementById('customer-name').value = this.editingCustomer.name;
+            document.getElementById('customer-phone').value = this.editingCustomer.phone;
+            document.getElementById('customer-email').value = this.editingCustomer.email || '';
+            document.getElementById('customer-address').value = this.editingCustomer.address || '';
+            document.getElementById('customer-date-of-birth').value = this.editingCustomer.dateOfBirth || '';
+            document.getElementById('customer-gender').value = this.editingCustomer.gender || '';
+            document.getElementById('customer-notes').value = this.editingCustomer.notes || '';
+            document.getElementById('customer-id-input').value = this.editingCustomer.id;
+            document.getElementById('customer-id-input').placeholder = 'Customer ID';
+            this.openModal('customer-modal');
+        }
+    }
+
+    filterCustomers(query) {
+        const filteredCustomers = this.customers.filter(customer => 
+            customer.name.toLowerCase().includes(query.toLowerCase()) ||
+            customer.phone.includes(query) ||
+            customer.id.toLowerCase().includes(query) ||
+            (customer.email && customer.email.toLowerCase().includes(query.toLowerCase()))
+        );
+
+        const tbody = document.getElementById('customers-table-body');
+        if (tbody) {
+            tbody.innerHTML = filteredCustomers.map(customer => `
+                <tr>
+                    <td>${customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.email || '-'}</td>
+                    <td><span class="points-badge">${customer.points}</span></td>
+                    <td>${new Date(customer.joinDate).toLocaleDateString()}</td>
+                    <td>${new Date(customer.lastActivity).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="pharmacySystem.selectCustomer('${customer.id}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editCustomer('${customer.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    sortCustomers(sortBy) {
+        let sortedCustomers = [...this.customers];
+        
+        switch(sortBy) {
+            case 'name':
+                sortedCustomers.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'points':
+                sortedCustomers.sort((a, b) => b.points - a.points);
+                break;
+            case 'join-date':
+                sortedCustomers.sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate));
+                break;
+        }
+
+        const tbody = document.getElementById('customers-table-body');
+        if (tbody) {
+            tbody.innerHTML = sortedCustomers.map(customer => `
+                <tr>
+                    <td>${customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.email || '-'}</td>
+                    <td><span class="points-badge">${customer.points}</span></td>
+                    <td>${new Date(customer.joinDate).toLocaleDateString()}</td>
+                    <td>${new Date(customer.lastActivity).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="pharmacySystem.selectCustomer('${customer.id}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editCustomer('${customer.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    loadTopCustomers() {
+        const topCustomers = [...this.customers]
+            .sort((a, b) => b.points - a.points)
+            .slice(0, 5);
+
+        const container = document.getElementById('top-customers-list');
+        if (container) {
+            container.innerHTML = topCustomers.map((customer, index) => `
+                <div class="top-customer-item">
+                    <div class="rank">${index + 1}</div>
+                    <div class="customer-info">
+                        <h5>${customer.name}</h5>
+                        <p>${customer.points} points</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    loadRecentRedemptions() {
+        const recentRedemptions = this.loyaltyTransactions
+            .filter(t => t.type === 'redeemed')
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 5);
+
+        const container = document.getElementById('recent-redemptions-list');
+        if (container) {
+            container.innerHTML = recentRedemptions.map(transaction => {
+                const customer = this.customers.find(c => c.id === transaction.customerId);
+                return `
+                    <div class="redemption-item">
+                        <div class="redemption-info">
+                            <h5>${customer ? customer.name : 'Unknown Customer'}</h5>
+                            <p>${transaction.points} points → ر.س${transaction.discountAmount.toFixed(2)}</p>
+                            <small>${new Date(transaction.timestamp).toLocaleDateString()}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    generateLoyaltyReport() {
+        const reportData = {
+            totalCustomers: this.customers.length,
+            totalPointsIssued: this.loyaltyTransactions
+                .filter(t => t.type === 'earned')
+                .reduce((sum, t) => sum + t.points, 0),
+            totalPointsRedeemed: this.loyaltyTransactions
+                .filter(t => t.type === 'redeemed')
+                .reduce((sum, t) => sum + t.points, 0),
+            totalDiscountsGiven: this.loyaltyTransactions
+                .filter(t => t.type === 'redeemed')
+                .reduce((sum, t) => sum + t.discountAmount, 0),
+            topCustomers: [...this.customers]
+                .sort((a, b) => b.points - a.points)
+                .slice(0, 10),
+            recentTransactions: this.loyaltyTransactions
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 20)
+        };
+
+        this.displayLoyaltyReport(reportData);
+    }
+
+    displayLoyaltyReport(data) {
+        const reportContent = `
+            <div class="loyalty-report">
+                <h3>Loyalty Program Report</h3>
+                <div class="report-summary">
+                    <div class="summary-item">
+                        <h4>${data.totalCustomers}</h4>
+                        <p>Total Customers</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>${data.totalPointsIssued.toLocaleString()}</h4>
+                        <p>Points Issued</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>${data.totalPointsRedeemed.toLocaleString()}</h4>
+                        <p>Points Redeemed</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>ر.س${data.totalDiscountsGiven.toFixed(2)}</h4>
+                        <p>Discounts Given</p>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h4>Top Customers by Points</h4>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Customer Name</th>
+                                <th>Points</th>
+                                <th>Join Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.topCustomers.map((customer, index) => `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${customer.name}</td>
+                                    <td>${customer.points}</td>
+                                    <td>${new Date(customer.joinDate).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="report-section">
+                    <h4>Recent Transactions</h4>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Type</th>
+                                <th>Points</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.recentTransactions.map(transaction => {
+                                const customer = this.customers.find(c => c.id === transaction.customerId);
+                                return `
+                                    <tr>
+                                        <td>${new Date(transaction.timestamp).toLocaleDateString()}</td>
+                                        <td>${customer ? customer.name : 'Unknown'}</td>
+                                        <td>${transaction.type === 'earned' ? 'Earned' : 'Redeemed'}</td>
+                                        <td>${transaction.points}</td>
+                                        <td>${transaction.discountAmount ? `ر.س${transaction.discountAmount.toFixed(2)}` : '-'}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('report-title').textContent = 'Loyalty Program Report';
+        document.getElementById('report-content').innerHTML = reportContent;
+        document.getElementById('report-display').style.display = 'block';
+    }
+
+    exportLoyaltyData() {
+        const data = {
+            customers: this.customers,
+            transactions: this.loyaltyTransactions,
+            exportDate: new Date().toISOString(),
+            systemVersion: '1.0.0'
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `loyalty-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showMessage('Loyalty data exported successfully!', 'success');
+    }
+
+    // Method to add points when customer makes a purchase (called from dispensing process)
+    addPointsFromPurchase(customerId, purchaseAmount) {
+        const customer = this.customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        const pointsEarned = Math.floor(purchaseAmount); // 1 point per SAR
+        if (pointsEarned <= 0) return;
+
+        customer.points += pointsEarned;
+        customer.lastActivity = new Date().toISOString();
+
+        const transaction = {
+            id: this.generateTransactionId(),
+            customerId: customerId,
+            type: 'earned',
+            points: pointsEarned,
+            reason: 'purchase',
+            notes: `Earned ${pointsEarned} points from purchase of ر.س${purchaseAmount.toFixed(2)}`,
+            timestamp: new Date().toISOString(),
+            staffId: this.currentUser?.id || 'system'
+        };
+
+        this.loyaltyTransactions.push(transaction);
+
+        this.saveData('customers', this.customers);
+        this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+        this.showMessage(`${pointsEarned} points added to ${customer.name}'s account!`, 'success');
+    }
+
+    // ==================== DISPENSING LOYALTY METHODS ====================
+
+    lookupCustomerForDispensing() {
+        const phoneNumber = document.getElementById('customer-phone-input').value.trim();
+        
+        if (!phoneNumber) {
+            this.showMessage('Please enter a phone number', 'error');
+            return;
+        }
+
+        const customer = this.customers.find(c => c.phone === phoneNumber);
+        
+        if (customer) {
+            this.selectedDispensingCustomer = customer;
+            this.displayDispensingCustomerInfo(customer);
+            this.updateLoyaltyPreview();
+            this.showMessage(`Customer found: ${customer.name}`, 'success');
+        } else {
+            this.showMessage('Customer not found. Please check the phone number or add the customer first.', 'error');
+            this.clearDispensingCustomerInfo();
+        }
+    }
+
+    displayDispensingCustomerInfo(customer) {
+        document.getElementById('dispensing-customer-name').textContent = customer.name;
+        document.getElementById('dispensing-customer-points').textContent = `${customer.points} points`;
+        document.getElementById('customer-loyalty-info').style.display = 'block';
+    }
+
+    clearDispensingCustomerInfo() {
+        // Restore points if there's an active redemption when clearing customer
+        if (this.currentRedemption && this.selectedDispensingCustomer) {
+            this.restoreRedemptionPoints();
+        }
+        
+        this.selectedDispensingCustomer = null;
+        document.getElementById('customer-loyalty-info').style.display = 'none';
+        document.getElementById('customer-phone-input').value = '';
+    }
+
+    updateLoyaltyPreview() {
+        if (!this.selectedDispensingCustomer) {
+            document.getElementById('points-to-earn').textContent = '0';
+            return;
+        }
+
+        const cartTotal = this.calculateCartTotal();
+        const pointsToEarn = Math.floor(cartTotal); // 1 point per SAR
+        document.getElementById('points-to-earn').textContent = pointsToEarn;
+    }
+
+    calculateCartTotal() {
+        return this.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    }
+
+
+    generateDispensingId() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `DISP${timestamp}${random}`;
+    }
+
+    // Override the existing printReceiptFromCart method to include loyalty information
+    printReceiptFromCart(cart) {
+        const totalAmount = this.calculateCartTotal();
+        const pointsEarned = this.selectedDispensingCustomer ? Math.floor(totalAmount) : 0;
+        
+        let receiptContent = `
+            <div class="receipt">
+                <div class="receipt-header">
+                    <h2>VivaLife Pharmacy</h2>
+                    <p>Receipt #${this.generateDispensingId()}</p>
+                    <p>Date: ${new Date().toLocaleString()}</p>
+                    <p>Staff: ${this.currentUser?.name || 'Unknown'}</p>
+                </div>
+                
+                <div class="receipt-items">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        cart.forEach(item => {
+            receiptContent += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>ر.س${item.price.toFixed(2)}</td>
+                    <td>ر.س${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        receiptContent += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="receipt-total">
+                    <p><strong>Total: ر.س${totalAmount.toFixed(2)}</strong></p>
+        `;
+
+        // Add loyalty information if customer is selected
+        if (this.selectedDispensingCustomer) {
+            receiptContent += `
+                    <div class="loyalty-info">
+                        <p><strong>Customer: ${this.selectedDispensingCustomer.name}</strong></p>
+                        <p>Phone: ${this.selectedDispensingCustomer.phone}</p>
+                        <p>Points Earned: ${pointsEarned}</p>
+                        <p>Total Points: ${this.selectedDispensingCustomer.points + pointsEarned}</p>
+                    </div>
+            `;
+        }
+
+        receiptContent += `
+                </div>
+                
+                <div class="receipt-footer">
+                    <p>Thank you for your business!</p>
+                    <p>Visit our loyalty program for more rewards</p>
+                </div>
+            </div>
+        `;
+
+        // Create and show receipt modal
+        this.showReceiptModal(receiptContent);
+    }
+
+    showReceiptModal(content) {
+        // Remove existing receipt modal if any
+        const existingModal = document.getElementById('receipt-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create receipt modal
+        const modal = document.createElement('div');
+        modal.id = 'receipt-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content receipt-modal-content">
+                <div class="modal-header">
+                    <h3>Receipt Preview</h3>
+                    <span class="close" id="close-receipt-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+                <div class="modal-footer">
+                    <button id="print-receipt-modal-btn" class="btn btn-primary">
+                        <i class="fas fa-print"></i> Print Receipt
+                    </button>
+                    <button id="close-receipt-modal-btn" class="btn btn-outline">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+
+        // Add event listeners
+        document.getElementById('close-receipt-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        document.getElementById('close-receipt-modal-btn').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        document.getElementById('print-receipt-modal-btn').addEventListener('click', () => {
+            window.print();
+        });
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // ==================== DISPENSING REDEMPTION METHODS ====================
+
+    restoreRedemptionPoints() {
+        if (this.currentRedemption && this.selectedDispensingCustomer) {
+            // Restore points to customer account
+            this.selectedDispensingCustomer.points += this.currentRedemption.pointsRedeemed;
+
+            // Create restoration transaction
+            const restorationTransaction = {
+                id: this.generateTransactionId(),
+                customerId: this.selectedDispensingCustomer.id,
+                type: 'restoration',
+                points: this.currentRedemption.pointsRedeemed,
+                amount: 0,
+                reason: 'Points restored due to dispensing cancellation',
+                timestamp: new Date().toISOString(),
+                dispensingId: null
+            };
+
+            this.loyaltyTransactions.push(restorationTransaction);
+
+            // Save data
+            this.saveData('customers', this.customers);
+            this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+            // Update UI
+            this.displayDispensingCustomerInfo(this.selectedDispensingCustomer);
+            this.updateLoyaltyPreview();
+
+            // Show restoration message
+            this.showMessage(`${this.currentRedemption.pointsRedeemed} points restored to ${this.selectedDispensingCustomer.name}'s account`, 'success');
+
+            // Clear redemption
+            this.currentRedemption = null;
+        }
+    }
+
+    clearCartWithConfirmation() {
+        if (this.cart.length === 0) {
+            this.showMessage('Cart is already empty', 'info');
+            return;
+        }
+
+        let confirmMessage = 'Are you sure you want to clear the cart?';
+        
+        // Add warning about points restoration if redemption is active
+        if (this.currentRedemption && this.selectedDispensingCustomer) {
+            confirmMessage += `\n\nThis will restore ${this.currentRedemption.pointsRedeemed} points to ${this.selectedDispensingCustomer.name}'s account.`;
+        }
+
+        if (confirm(confirmMessage)) {
+            // Restore points if redemption is active
+            if (this.currentRedemption) {
+                this.restoreRedemptionPoints();
+            }
+
+            // Clear cart, discount, offer, and customer info
+            this.cart = [];
+            this.appliedDiscount = null;
+            this.appliedOffer = null;
+            this.renderCart();
+            this.clearDispensingCustomerInfo();
+            this.hideAppliedDiscount();
+            this.hideAppliedOffer();
+
+            this.showMessage('Cart cleared successfully', 'success');
+        }
+    }
+
+    openDispensingRedemptionModal() {
+        if (!this.selectedDispensingCustomer) {
+            this.showMessage('Please select a customer first', 'error');
+            return;
+        }
+
+        if (this.cart.length === 0) {
+            this.showMessage('Cart is empty! Add items before redeeming points', 'error');
+            return;
+        }
+
+        // Populate customer info
+        document.getElementById('redemption-customer-name').textContent = this.selectedDispensingCustomer.name;
+        document.getElementById('redemption-available-points').textContent = this.selectedDispensingCustomer.points;
+        document.getElementById('redemption-cart-total').textContent = this.formatCurrency(this.calculateCartTotal());
+
+        // Reset form
+        document.getElementById('redemption-points-amount').value = '';
+        this.updateDispensingRedemptionPreview();
+
+        // Show modal
+        this.openModal('dispensing-redemption-modal');
+    }
+
+    updateDispensingRedemptionPreview() {
+        const pointsToRedeem = parseInt(document.getElementById('redemption-points-amount').value) || 0;
+        const availablePoints = this.selectedDispensingCustomer.points;
+        const cartTotal = this.calculateCartTotal();
+
+        // Validate points
+        if (pointsToRedeem < 100) {
+            document.getElementById('preview-points').textContent = '0';
+            document.getElementById('preview-discount').textContent = 'ر.س0.00';
+            document.getElementById('preview-new-total').textContent = this.formatCurrency(cartTotal);
+            document.getElementById('preview-remaining-points').textContent = availablePoints;
+            return;
+        }
+
+        if (pointsToRedeem > availablePoints) {
+            this.showMessage('Not enough points available', 'error');
+            document.getElementById('redemption-points-amount').value = availablePoints;
+            return;
+        }
+
+        // Calculate discount (100 points = 2 SAR)
+        const discountAmount = (pointsToRedeem / 100) * 2;
+        const newTotal = Math.max(0, cartTotal - discountAmount);
+        const remainingPoints = availablePoints - pointsToRedeem;
+
+        // Update preview
+        document.getElementById('preview-points').textContent = pointsToRedeem;
+        document.getElementById('preview-discount').textContent = this.formatCurrency(discountAmount);
+        document.getElementById('preview-new-total').textContent = this.formatCurrency(newTotal);
+        document.getElementById('preview-remaining-points').textContent = remainingPoints;
+    }
+
+    confirmDispensingRedemption() {
+        const pointsToRedeem = parseInt(document.getElementById('redemption-points-amount').value) || 0;
+        const availablePoints = this.selectedDispensingCustomer.points;
+
+        // Validation
+        if (pointsToRedeem < 100) {
+            this.showMessage('Minimum redemption is 100 points', 'error');
+            return;
+        }
+
+        if (pointsToRedeem > availablePoints) {
+            this.showMessage('Not enough points available', 'error');
+            return;
+        }
+
+        // Calculate discount
+        const discountAmount = (pointsToRedeem / 100) * 2;
+        const cartTotal = this.calculateCartTotal();
+        const newTotal = Math.max(0, cartTotal - discountAmount);
+
+        // Store redemption info
+        this.currentRedemption = {
+            pointsRedeemed: pointsToRedeem,
+            discountAmount: discountAmount,
+            originalTotal: cartTotal,
+            newTotal: newTotal
+        };
+
+        // Update customer points
+        this.selectedDispensingCustomer.points -= pointsToRedeem;
+
+        // Create redemption transaction
+        const transaction = {
+            id: this.generateTransactionId(),
+            customerId: this.selectedDispensingCustomer.id,
+            type: 'redemption',
+            points: -pointsToRedeem,
+            amount: discountAmount,
+            reason: 'Points redemption during dispensing',
+            timestamp: new Date().toISOString(),
+            dispensingId: null // Will be set when dispensing is processed
+        };
+
+        this.loyaltyTransactions.push(transaction);
+
+        // Save data
+        this.saveData('customers', this.customers);
+        this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+        // Update UI
+        this.updateLoyaltyPreview();
+        this.displayDispensingCustomerInfo(this.selectedDispensingCustomer);
+        this.renderCart(); // Refresh cart to show discount on all items
+
+        // Close modal
+        this.closeModal('dispensing-redemption-modal');
+
+        // Show success message
+        this.showMessage(`${pointsToRedeem} points redeemed for ${this.formatCurrency(discountAmount)} discount!`, 'success');
+    }
+
+    // Override the existing processDispensing method to include redemption
+    processDispensing() {
+        if (this.cart.length === 0) {
+            this.showMessage('Cart is empty!', 'error');
+            return;
+        }
+
+        // Check for low stock before processing
+        const lowStockItems = this.cart.filter(item => {
+            const product = this.products.find(p => p.id === item.id);
+            return product && product.currentStock < item.quantity;
+        });
+
+        if (lowStockItems.length > 0) {
+            this.showMessage('Some items have insufficient stock!', 'error');
+            return;
+        }
+
+        // Calculate final total with redemption, discounts, and offers
+        let finalTotal = this.calculateCartTotal();
+        if (this.currentRedemption) {
+            finalTotal = this.currentRedemption.newTotal;
+        }
+        if (this.appliedDiscount) {
+            finalTotal = this.appliedDiscount.newTotal;
+        }
+        if (this.appliedOffer) {
+            finalTotal = this.appliedOffer.newTotal;
+        }
+
+        // Create dispensing record
+        const dispensingRecord = {
+            id: this.generateDispensingId(),
+            timestamp: new Date().toISOString(),
+            items: [...this.cart],
+            totalAmount: finalTotal,
+            originalAmount: this.calculateCartTotal(),
+            redemption: this.currentRedemption || null,
+            discount: this.appliedDiscount || null,
+            offer: this.appliedOffer || null,
+            staffId: this.currentUser?.id || 'unknown',
+            pharmacyId: this.currentPharmacy?.id || 'unknown',
+            customerId: this.selectedDispensingCustomer?.id || null,
+            customerPhone: this.selectedDispensingCustomer?.phone || null
+        };
+
+        // Update inventory
+        this.cart.forEach(cartItem => {
+            const product = this.products.find(p => p.id === cartItem.id);
+            if (product) {
+                product.currentStock -= cartItem.quantity;
+            }
+        });
+
+        // Add to dispensing history
+        this.dispensingHistory.push(dispensingRecord);
+
+        // Award loyalty points if customer is selected (after redemption)
+        if (this.selectedDispensingCustomer) {
+            const pointsEarned = Math.floor(finalTotal);
+            this.addPointsFromPurchase(this.selectedDispensingCustomer.id, finalTotal);
+
+            // Update redemption transaction with dispensing ID
+            if (this.currentRedemption) {
+                const redemptionTransaction = this.loyaltyTransactions.find(t => 
+                    t.customerId === this.selectedDispensingCustomer.id && 
+                    t.type === 'redemption' && 
+                    t.dispensingId === null
+                );
+                if (redemptionTransaction) {
+                    redemptionTransaction.dispensingId = dispensingRecord.id;
+                }
+            }
+        }
+
+        // Save data
+        this.saveData('products', this.products);
+        this.saveData('dispensingHistory', this.dispensingHistory);
+        this.saveData('loyaltyTransactions', this.loyaltyTransactions);
+
+        // Print receipt before clearing cart
+        this.showMessage('Generating receipt...', 'info');
+        this.printReceiptFromCart(this.cart);
+
+        // Clear cart, customer selection, redemption, discount, and offer
+        this.cart = [];
+        this.selectedDispensingCustomer = null;
+        this.currentRedemption = null;
+        this.appliedDiscount = null;
+        this.appliedOffer = null;
+        this.renderCart();
+        this.clearDispensingCustomerInfo();
+        this.hideAppliedDiscount();
+        this.loadInventory();
+        this.loadDashboard();
+
+        this.showMessage('Dispensing completed successfully!', 'success');
+    }
+
+    // Override the existing printReceiptFromCart method to include redemption and discount information
+    printReceiptFromCart(cart) {
+        const originalTotal = this.calculateCartTotal();
+        let finalTotal = originalTotal;
+        
+        if (this.currentRedemption) {
+            finalTotal = this.currentRedemption.newTotal;
+        }
+        if (this.appliedDiscount) {
+            finalTotal = this.appliedDiscount.newTotal;
+        }
+        
+        const pointsEarned = this.selectedDispensingCustomer ? Math.floor(finalTotal) : 0;
+        
+        let receiptContent = `
+            <div class="receipt">
+                <div class="receipt-header">
+                    <h2>VivaLife Pharmacy</h2>
+                    <p>Receipt #${this.generateDispensingId()}</p>
+                    <p>Date: ${new Date().toLocaleString()}</p>
+                    <p>Staff: ${this.currentUser?.name || 'Unknown'}</p>
+                </div>
+                
+                <div class="receipt-items">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        cart.forEach(item => {
+            receiptContent += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>ر.س${item.price.toFixed(2)}</td>
+                    <td>ر.س${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        receiptContent += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="receipt-total">
+                    <p>Subtotal: ر.س${originalTotal.toFixed(2)}</p>
+        `;
+
+        // Add redemption information if applicable
+        if (this.currentRedemption) {
+            receiptContent += `
+                    <p>Loyalty Discount: -ر.س${this.currentRedemption.discountAmount.toFixed(2)}</p>
+                    <p>Points Redeemed: ${this.currentRedemption.pointsRedeemed}</p>
+            `;
+        }
+
+        // Add discount code information if applicable
+        if (this.appliedDiscount) {
+            receiptContent += `
+                    <p>Discount Code: ${this.appliedDiscount.name}</p>
+                    <p>Discount: -ر.س${this.appliedDiscount.appliedAmount.toFixed(2)}</p>
+            `;
+        }
+
+        // Add offer information if applicable
+        if (this.appliedOffer) {
+            receiptContent += `
+                    <p>Special Offer: ${this.appliedOffer.name}</p>
+                    <p>Savings: -ر.س${this.appliedOffer.appliedSavings.toFixed(2)}</p>
+            `;
+        }
+
+        receiptContent += `
+                    <p><strong>Total: ر.س${finalTotal.toFixed(2)}</strong></p>
+        `;
+
+        // Add loyalty information if customer is selected
+        if (this.selectedDispensingCustomer) {
+            receiptContent += `
+                    <div class="loyalty-info">
+                        <p><strong>Customer: ${this.selectedDispensingCustomer.name}</strong></p>
+                        <p>Phone: ${this.selectedDispensingCustomer.phone}</p>
+                        <p>Points Earned: ${pointsEarned}</p>
+                        <p>Total Points: ${this.selectedDispensingCustomer.points + pointsEarned}</p>
+                    </div>
+            `;
+        }
+
+        receiptContent += `
+                </div>
+                
+                <div class="receipt-footer">
+                    <p>Thank you for your business!</p>
+                    <p>Visit our loyalty program for more rewards</p>
+                </div>
+            </div>
+        `;
+
+        // Create and show receipt modal
+        this.showReceiptModal(receiptContent);
+    }
+
+    // ==================== DISCOUNT CODE METHODS ====================
+
+    applyDiscountCode() {
+        const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
+        
+        if (!code) {
+            this.showMessage('Please enter a discount code', 'error');
+            return;
+        }
+
+        if (this.cart.length === 0) {
+            this.showMessage('Add items to cart before applying discount', 'error');
+            return;
+        }
+
+        // Find discount by code
+        const discount = this.discounts.find(d => 
+            d.code && d.code.toUpperCase() === code && 
+            d.active && 
+            new Date(d.startDate) <= new Date() && 
+            new Date(d.endDate) > new Date()
+        );
+
+        if (!discount) {
+            this.showMessage('Invalid or expired discount code', 'error');
+            return;
+        }
+
+        // Check if discount applies to cart items
+        const cartTotal = this.calculateCartTotal();
+        if (discount.minAmount > 0 && cartTotal < discount.minAmount) {
+            this.showMessage(`Minimum purchase of ${this.formatCurrency(discount.minAmount)} required`, 'error');
+            return;
+        }
+
+        // Check if discount applies to specific products
+        if (discount.products.length > 0) {
+            const cartProductIds = this.cart.map(item => item.id);
+            const hasApplicableProduct = discount.products.some(productId => 
+                cartProductIds.includes(productId)
+            );
+            
+            if (!hasApplicableProduct) {
+                this.showMessage('This discount does not apply to items in your cart', 'error');
+                return;
+            }
+        }
+
+        // Calculate discount amount
+        let discountAmount = 0;
+        if (discount.type === 'percentage') {
+            discountAmount = (cartTotal * discount.value) / 100;
+        } else if (discount.type === 'fixed') {
+            discountAmount = discount.value;
+        }
+
+        // Apply maximum discount limit
+        if (discount.maxAmount && discountAmount > discount.maxAmount) {
+            discountAmount = discount.maxAmount;
+        }
+
+        // Store applied discount
+        this.appliedDiscount = {
+            ...discount,
+            appliedAmount: discountAmount,
+            originalTotal: cartTotal,
+            newTotal: Math.max(0, cartTotal - discountAmount)
+        };
+
+        // Update UI
+        this.displayAppliedDiscount();
+        this.renderCart();
+        this.showMessage(`Discount "${discount.name}" applied successfully!`, 'success');
+
+        // Clear input
+        document.getElementById('discount-code-input').value = '';
+    }
+
+    removeDiscountCode() {
+        this.appliedDiscount = null;
+        this.hideAppliedDiscount();
+        this.renderCart();
+        this.showMessage('Discount removed', 'info');
+    }
+
+    displayAppliedDiscount() {
+        const discount = this.appliedDiscount;
+        
+        document.getElementById('applied-discount-name').textContent = discount.name;
+        document.getElementById('applied-discount-value').textContent = 
+            discount.type === 'percentage' ? `${discount.value}% off` : `${this.formatCurrency(discount.value)} off`;
+        document.getElementById('discount-amount').textContent = this.formatCurrency(discount.appliedAmount);
+        
+        document.getElementById('discount-info').style.display = 'block';
+    }
+
+    hideAppliedDiscount() {
+        document.getElementById('discount-info').style.display = 'none';
+    }
+
+    // ==================== APPLY OFFER METHODS ====================
+
+    getOfferTypeDisplayName(type) {
+        const typeMap = {
+            'bogo': 'BOGO',
+            'bogoh': 'BOGOH', 
+            'b2g1': 'B2G1',
+            'b3g1': 'B3G1'
+        };
+        return typeMap[type] || type.toUpperCase();
+    }
+
+    openOfferSelectionModal() {
+        if (this.cart.length === 0) {
+            this.showMessage('Please add items to cart first', 'error');
+            return;
+        }
+
+        this.loadAvailableOffers();
+        this.openModal('offer-selection-modal');
+    }
+
+    loadAvailableOffers() {
+        const availableOffersList = document.getElementById('available-offers-list');
+        const now = new Date();
+        
+        console.log('Loading available offers...');
+        console.log('All offers:', this.offers);
+        console.log('Cart items:', this.cart);
+        
+        // Filter active offers that match cart items
+        const availableOffers = this.offers.filter(offer => {
+            // Check if offer is active
+            if (!offer.active) {
+                console.log(`Offer ${offer.name} is not active`);
+                return false;
+            }
+            
+            const startDate = new Date(offer.startDate);
+            const endDate = new Date(offer.endDate);
+            if (now < startDate || now > endDate) {
+                console.log(`Offer ${offer.name} is outside date range`);
+                return false;
+            }
+            
+            // Check if offer product is in cart
+            const cartProductIds = this.cart.map(item => item.id);
+            const isInCart = cartProductIds.includes(offer.productId);
+            console.log(`Offer ${offer.name} product ${offer.productId} in cart:`, isInCart);
+            return isInCart;
+        });
+        
+        console.log('Available offers:', availableOffers);
+
+        if (availableOffers.length === 0) {
+            availableOffersList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-gift"></i>
+                    <p>No offers available for items in your cart</p>
+                </div>
+            `;
+            return;
+        }
+
+        availableOffersList.innerHTML = availableOffers.map(offer => {
+            const product = this.products.find(p => p.id === offer.productId);
+            const cartItem = this.cart.find(item => item.id === offer.productId);
+            
+            return `
+                <div class="offer-item" data-offer-id="${offer.id}">
+                    <div class="offer-header">
+                        <div class="offer-name">${offer.name}</div>
+                        <div class="offer-type">${this.getOfferTypeDisplayName(offer.type)}</div>
+                    </div>
+                    <div class="offer-details">
+                        <div class="offer-description">${offer.description || 'Special offer'}</div>
+                        <div class="offer-validity">Valid until ${new Date(offer.endDate).toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Add click listeners to offer items
+        availableOffersList.querySelectorAll('.offer-item').forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove previous selection
+                availableOffersList.querySelectorAll('.offer-item').forEach(i => i.classList.remove('selected'));
+                // Add selection to clicked item
+                item.classList.add('selected');
+                
+                const offerId = item.dataset.offerId;
+                this.previewOffer(offerId);
+            });
+        });
+    }
+
+    previewOffer(offerId) {
+        const offer = this.offers.find(o => o.id === offerId);
+        if (!offer) return;
+
+        const product = this.products.find(p => p.id === offer.productId);
+        const cartItem = this.cart.find(item => item.id === offer.productId);
+        
+        if (!product || !cartItem) return;
+
+        // Calculate savings based on offer type
+        let savings = 0;
+        let newTotal = this.calculateCartTotal();
+        
+        console.log('Calculating savings for offer:', offer);
+        console.log('Product:', product);
+        console.log('Cart item:', cartItem);
+
+        switch (offer.type) {
+            case 'bogo':
+                // Buy 1 Get 1 Free
+                if (cartItem.quantity >= 2) {
+                    const freeItems = Math.floor(cartItem.quantity / 2);
+                    savings = freeItems * product.price;
+                }
+                break;
+            case 'bogoh':
+                // Buy 1 Get 1 Half Price
+                if (cartItem.quantity >= 2) {
+                    const halfPriceItems = Math.floor(cartItem.quantity / 2);
+                    savings = halfPriceItems * (product.price * 0.5);
+                }
+                break;
+            case 'b2g1':
+                // Buy 2 Get 1 Free
+                if (cartItem.quantity >= 3) {
+                    const freeItems = Math.floor(cartItem.quantity / 3);
+                    savings = freeItems * product.price;
+                }
+                break;
+            case 'b3g1':
+                // Buy 3 Get 1 Free
+                if (cartItem.quantity >= 4) {
+                    const freeItems = Math.floor(cartItem.quantity / 4);
+                    savings = freeItems * product.price;
+                }
+                break;
+        }
+
+        newTotal = Math.max(0, newTotal - savings);
+        
+        console.log('Calculated savings:', savings);
+        console.log('New total:', newTotal);
+
+        // Update preview
+        document.getElementById('preview-offer-name').textContent = offer.name;
+        document.getElementById('preview-offer-type').textContent = this.getOfferTypeDisplayName(offer.type);
+        document.getElementById('preview-offer-savings').textContent = this.formatCurrency(savings);
+        document.getElementById('preview-new-total').textContent = this.formatCurrency(newTotal);
+        
+        // Show preview and enable confirm button
+        document.getElementById('offer-preview').style.display = 'block';
+        document.getElementById('confirm-offer-selection').disabled = false;
+    }
+
+    confirmOfferSelection() {
+        const selectedOffer = document.querySelector('.offer-item.selected');
+        if (!selectedOffer) {
+            this.showMessage('Please select an offer', 'error');
+            return;
+        }
+
+        const offerId = selectedOffer.dataset.offerId;
+        const offer = this.offers.find(o => o.id === offerId);
+        if (!offer) return;
+
+        const product = this.products.find(p => p.id === offer.productId);
+        const cartItem = this.cart.find(item => item.id === offer.productId);
+        
+        if (!product || !cartItem) return;
+
+        // Calculate savings
+        let savings = 0;
+        let newTotal = this.calculateCartTotal();
+
+        switch (offer.type) {
+            case 'bogo':
+                if (cartItem.quantity >= 2) {
+                    const freeItems = Math.floor(cartItem.quantity / 2);
+                    savings = freeItems * product.price;
+                }
+                break;
+            case 'bogoh':
+                if (cartItem.quantity >= 2) {
+                    const halfPriceItems = Math.floor(cartItem.quantity / 2);
+                    savings = halfPriceItems * (product.price * 0.5);
+                }
+                break;
+            case 'b2g1':
+                if (cartItem.quantity >= 3) {
+                    const freeItems = Math.floor(cartItem.quantity / 3);
+                    savings = freeItems * product.price;
+                }
+                break;
+            case 'b3g1':
+                if (cartItem.quantity >= 4) {
+                    const freeItems = Math.floor(cartItem.quantity / 4);
+                    savings = freeItems * product.price;
+                }
+                break;
+        }
+
+        newTotal = Math.max(0, newTotal - savings);
+
+        // Store applied offer
+        this.appliedOffer = {
+            ...offer,
+            appliedSavings: savings,
+            originalTotal: this.calculateCartTotal(),
+            newTotal: newTotal,
+            productId: offer.productId,
+            productName: product.name
+        };
+
+        // Update UI
+        this.displayAppliedOffer();
+        this.renderCart();
+        this.closeModal('offer-selection-modal');
+
+        this.showMessage(`Offer "${offer.name}" applied successfully!`, 'success');
+    }
+
+    displayAppliedOffer() {
+        const offer = this.appliedOffer;
+        
+        document.getElementById('applied-offer-name').textContent = offer.name;
+        document.getElementById('applied-offer-type').textContent = this.getOfferTypeDisplayName(offer.type);
+        document.getElementById('offer-savings').textContent = this.formatCurrency(offer.appliedSavings);
+        
+        document.getElementById('applied-offer-info').style.display = 'block';
+    }
+
+    hideAppliedOffer() {
+        document.getElementById('applied-offer-info').style.display = 'none';
+    }
+
+    removeAppliedOffer() {
+        this.appliedOffer = null;
+        this.hideAppliedOffer();
+        this.renderCart();
+        this.showMessage('Offer removed', 'info');
+    }
+
+    // ==================== DISCOUNTS & OFFERS METHODS ====================
+
+    loadDiscounts() {
+        this.renderActiveDiscounts();
+        this.renderActiveOffers();
+        this.renderDiscountHistory();
+        this.populateProductSelects();
+    }
+
+    openDiscountModal() {
+        this.resetDiscountForm();
+        this.populateProductSelects();
+        this.openModal('discount-modal');
+    }
+
+    openOfferModal() {
+        this.resetOfferForm();
+        this.populateProductSelects();
+        this.openModal('offer-modal');
+    }
+
+    resetDiscountForm() {
+        document.getElementById('discount-form').reset();
+        document.getElementById('discount-active').checked = true;
+        
+        // Set default dates
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        
+        document.getElementById('discount-start-date').value = this.formatDateTimeLocal(now);
+        document.getElementById('discount-end-date').value = this.formatDateTimeLocal(nextWeek);
+    }
+
+    resetOfferForm() {
+        document.getElementById('offer-form').reset();
+        document.getElementById('offer-active').checked = true;
+        
+        // Set default dates
+        const now = new Date();
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        
+        document.getElementById('offer-start-date').value = this.formatDateTimeLocal(now);
+        document.getElementById('offer-end-date').value = this.formatDateTimeLocal(nextWeek);
+    }
+
+    formatDateTimeLocal(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    populateProductSelects() {
+        this.populateDiscountProductList();
+        this.populateOfferProductSelect();
+    }
+
+    populateDiscountProductList() {
+        const container = document.getElementById('discount-products-list');
+        const offerSelect = document.getElementById('offer-product');
+        
+        // Clear existing options
+        container.innerHTML = '';
+        offerSelect.innerHTML = '<option value="">Select Product</option>';
+        
+        // Add products to discount list
+        this.products.forEach(product => {
+            const productItem = document.createElement('div');
+            productItem.className = 'product-selection-item';
+            productItem.innerHTML = `
+                <input type="checkbox" id="product-${product.id}" value="${product.id}">
+                <div class="product-info">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-sku">SKU: ${product.sku}</div>
+                    <div class="product-price">ر.س${product.price.toFixed(2)}</div>
+                </div>
+            `;
+            container.appendChild(productItem);
+            
+            // Add to offer select
+            const option = document.createElement('option');
+            option.value = product.id;
+            option.textContent = `${product.name} (${product.sku})`;
+            offerSelect.appendChild(option);
+        });
+
+        // Add event listeners for checkboxes
+        container.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                this.updateProductSelectionCount();
+            }
+        });
+
+        // Add event listeners for select all/clear all buttons
+        document.getElementById('select-all-products').addEventListener('click', () => {
+            this.selectAllProducts();
+        });
+
+        document.getElementById('clear-all-products').addEventListener('click', () => {
+            this.clearAllProducts();
+        });
+    }
+
+    populateOfferProductSelect() {
+        const offerSelect = document.getElementById('offer-product');
+        offerSelect.innerHTML = '<option value="">Select Product</option>';
+        
+        this.products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.id;
+            option.textContent = `${product.name} (${product.sku})`;
+            offerSelect.appendChild(option);
+        });
+    }
+
+    selectAllProducts() {
+        const checkboxes = document.querySelectorAll('#discount-products-list input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        this.updateProductSelectionCount();
+    }
+
+    clearAllProducts() {
+        const checkboxes = document.querySelectorAll('#discount-products-list input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.updateProductSelectionCount();
+    }
+
+    updateProductSelectionCount() {
+        const checkboxes = document.querySelectorAll('#discount-products-list input[type="checkbox"]');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        document.querySelector('.selected-count').textContent = `${selectedCount} products selected`;
+    }
+
+    getSelectedProducts() {
+        const checkboxes = document.querySelectorAll('#discount-products-list input[type="checkbox"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    saveDiscount() {
+        const form = document.getElementById('discount-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const discount = {
+            id: this.generateDiscountId(),
+            name: document.getElementById('discount-name').value.trim(),
+            code: document.getElementById('discount-code').value.trim() || null,
+            type: document.getElementById('discount-type').value,
+            value: parseFloat(document.getElementById('discount-value').value),
+            minAmount: parseFloat(document.getElementById('discount-min-amount').value) || 0,
+            maxAmount: parseFloat(document.getElementById('discount-max-amount').value) || null,
+            startDate: new Date(document.getElementById('discount-start-date').value),
+            endDate: new Date(document.getElementById('discount-end-date').value),
+            description: document.getElementById('discount-description').value.trim(),
+            products: this.getSelectedProducts(),
+            active: document.getElementById('discount-active').checked,
+            createdAt: new Date().toISOString(),
+            usageCount: 0,
+            totalSavings: 0
+        };
+
+        // Validation
+        if (discount.startDate >= discount.endDate) {
+            this.showMessage('End date must be after start date', 'error');
+            return;
+        }
+
+        if (discount.type === 'percentage' && (discount.value < 0 || discount.value > 100)) {
+            this.showMessage('Percentage must be between 0 and 100', 'error');
+            return;
+        }
+
+        if (discount.type === 'fixed' && discount.value < 0) {
+            this.showMessage('Fixed amount must be positive', 'error');
+            return;
+        }
+
+        this.discounts.push(discount);
+        this.saveData('discounts', this.discounts);
+
+        this.closeModal('discount-modal');
+        this.loadDiscounts();
+        this.showMessage('Discount created successfully!', 'success');
+    }
+
+    saveOffer() {
+        const form = document.getElementById('offer-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const offer = {
+            id: this.generateOfferId(),
+            name: document.getElementById('offer-name').value.trim(),
+            type: document.getElementById('offer-type').value,
+            productId: document.getElementById('offer-product').value,
+            quantity: parseInt(document.getElementById('offer-quantity').value),
+            startDate: new Date(document.getElementById('offer-start-date').value),
+            endDate: new Date(document.getElementById('offer-end-date').value),
+            description: document.getElementById('offer-description').value.trim(),
+            active: document.getElementById('offer-active').checked,
+            createdAt: new Date().toISOString(),
+            usageCount: 0,
+            totalSavings: 0
+        };
+
+        // Validation
+        if (offer.startDate >= offer.endDate) {
+            this.showMessage('End date must be after start date', 'error');
+            return;
+        }
+
+        this.offers.push(offer);
+        this.saveData('offers', this.offers);
+
+        this.closeModal('offer-modal');
+        this.loadDiscounts();
+        this.showMessage('Offer created successfully!', 'success');
+    }
+
+    generateDiscountId() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `DISC${timestamp}${random}`;
+    }
+
+    generateOfferId() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `OFFER${timestamp}${random}`;
+    }
+
+    renderActiveDiscounts() {
+        const container = document.getElementById('active-discounts-list');
+        const activeDiscounts = this.discounts.filter(d => d.active && new Date(d.endDate) > new Date());
+        
+        if (activeDiscounts.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 2rem;">No active discounts</p>';
+            return;
+        }
+
+        container.innerHTML = activeDiscounts.map(discount => `
+            <div class="discount-item">
+                <div class="discount-header">
+                    <div class="discount-name">${discount.name}</div>
+                    <div class="discount-type ${discount.type}">${discount.type}</div>
+                </div>
+                <div class="discount-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Value</div>
+                        <div class="detail-value">${discount.type === 'percentage' ? discount.value + '%' : 'ر.س' + discount.value}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${discount.code || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Valid Until</div>
+                        <div class="detail-value">${new Date(discount.endDate).toLocaleDateString()}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Usage</div>
+                        <div class="detail-value">${discount.usageCount} times</div>
+                    </div>
+                </div>
+                <div class="discount-actions">
+                    <button class="btn btn-sm btn-edit" onclick="pharmacySystem.editDiscount('${discount.id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-deactivate" onclick="pharmacySystem.toggleDiscount('${discount.id}')">
+                        <i class="fas fa-pause"></i> Deactivate
+                    </button>
+                    <button class="btn btn-sm btn-delete" onclick="pharmacySystem.deleteDiscount('${discount.id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderActiveOffers() {
+        const container = document.getElementById('active-offers-list');
+        const activeOffers = this.offers.filter(o => o.active && new Date(o.endDate) > new Date());
+        
+        if (activeOffers.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 2rem;">No active offers</p>';
+            return;
+        }
+
+        container.innerHTML = activeOffers.map(offer => {
+            const product = this.products.find(p => p.id === offer.productId);
+            return `
+                <div class="offer-item">
+                    <div class="offer-header">
+                        <div class="offer-name">${offer.name}</div>
+                        <div class="offer-type ${offer.type}">${offer.type.toUpperCase()}</div>
+                    </div>
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Product</div>
+                            <div class="detail-value">${product ? product.name : 'Unknown'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Min Quantity</div>
+                            <div class="detail-value">${offer.quantity}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Valid Until</div>
+                            <div class="detail-value">${new Date(offer.endDate).toLocaleDateString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Usage</div>
+                            <div class="detail-value">${offer.usageCount} times</div>
+                        </div>
+                    </div>
+                    <div class="offer-actions">
+                        <button class="btn btn-sm btn-edit" onclick="pharmacySystem.editOffer('${offer.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-deactivate" onclick="pharmacySystem.toggleOffer('${offer.id}')">
+                            <i class="fas fa-pause"></i> Deactivate
+                        </button>
+                        <button class="btn btn-sm btn-delete" onclick="pharmacySystem.deleteOffer('${offer.id}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderDiscountHistory() {
+        const container = document.getElementById('discount-history-list');
+        const allItems = [...this.discounts, ...this.offers].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        if (allItems.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 2rem;">No discount history</p>';
+            return;
+        }
+
+        container.innerHTML = allItems.map(item => {
+            const isExpired = new Date(item.endDate) < new Date();
+            const isDiscount = item.type === 'percentage' || item.type === 'fixed';
+            
+            return `
+                <div class="history-item">
+                    <div class="history-header">
+                        <div class="history-name">${item.name}</div>
+                        <div class="history-type ${isExpired ? 'expired' : (isDiscount ? item.type : item.type)}">
+                            ${isExpired ? 'EXPIRED' : (isDiscount ? item.type.toUpperCase() : item.type.toUpperCase())}
+                        </div>
+                    </div>
+                    <div class="history-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Type</div>
+                            <div class="detail-value">${isDiscount ? 'Discount' : 'Offer'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Created</div>
+                            <div class="detail-value">${new Date(item.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value ${isExpired ? 'status-expired' : (item.active ? 'status-active' : 'status-inactive')}">
+                                ${isExpired ? 'Expired' : (item.active ? 'Active' : 'Inactive')}
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Usage</div>
+                            <div class="detail-value">${item.usageCount} times</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    filterDiscountHistory() {
+        // This method will be implemented to filter the discount history
+        this.renderDiscountHistory();
+    }
+
+    // Placeholder methods for discount/offer management
+    editDiscount(id) {
+        this.showMessage('Edit discount functionality coming soon', 'info');
+    }
+
+    toggleDiscount(id) {
+        const discount = this.discounts.find(d => d.id === id);
+        if (discount) {
+            discount.active = !discount.active;
+            this.saveData('discounts', this.discounts);
+            this.loadDiscounts();
+            this.showMessage(`Discount ${discount.active ? 'activated' : 'deactivated'}`, 'success');
+        }
+    }
+
+    deleteDiscount(id) {
+        if (confirm('Are you sure you want to delete this discount?')) {
+            this.discounts = this.discounts.filter(d => d.id !== id);
+            this.saveData('discounts', this.discounts);
+            this.loadDiscounts();
+            this.showMessage('Discount deleted', 'success');
+        }
+    }
+
+    editOffer(id) {
+        this.showMessage('Edit offer functionality coming soon', 'info');
+    }
+
+    toggleOffer(id) {
+        const offer = this.offers.find(o => o.id === id);
+        if (offer) {
+            offer.active = !offer.active;
+            this.saveData('offers', this.offers);
+            this.loadDiscounts();
+            this.showMessage(`Offer ${offer.active ? 'activated' : 'deactivated'}`, 'success');
+        }
+    }
+
+    deleteOffer(id) {
+        if (confirm('Are you sure you want to delete this offer?')) {
+            this.offers = this.offers.filter(o => o.id !== id);
+            this.saveData('offers', this.offers);
+            this.loadDiscounts();
+            this.showMessage('Offer deleted', 'success');
+        }
     }
 }
 

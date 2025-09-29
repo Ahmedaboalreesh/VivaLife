@@ -150,6 +150,14 @@
                     <i class="fas fa-chart-bar"></i>
                     <span>Reports</span>
                 </li>
+                <li class="nav-item" data-section="loyalty">
+                    <i class="fas fa-gift"></i>
+                    <span>Loyalty Program</span>
+                </li>
+                <li class="nav-item" data-section="discounts">
+                    <i class="fas fa-percentage"></i>
+                    <span>Discounts & Offers</span>
+                </li>
                 <li class="nav-item" data-section="admin">
                     <i class="fas fa-cogs"></i>
                     <span>Admin</span>
@@ -305,6 +313,95 @@
                             <input type="text" id="dispense-search" placeholder="Search product name...">
                             <div id="product-suggestions" class="suggestions"></div>
                         </div>
+                        
+                        <!-- Customer Loyalty Section -->
+                        <div class="customer-loyalty-section">
+                            <div class="loyalty-header">
+                                <h4><i class="fas fa-gift"></i> Loyalty Program</h4>
+                                <p>Enter customer phone to earn loyalty points</p>
+                            </div>
+                            <div class="customer-phone-input">
+                                <div class="input-group">
+                                    <i class="fas fa-phone"></i>
+                                    <input type="tel" id="customer-phone-input" placeholder="Enter customer phone number">
+                                    <button id="lookup-customer-btn" class="btn btn-outline">
+                                        <i class="fas fa-search"></i> Lookup
+                                    </button>
+                                </div>
+                                <div id="customer-loyalty-info" class="customer-loyalty-info" style="display: none;">
+                                    <div class="customer-details">
+                                        <span class="customer-name" id="dispensing-customer-name">Customer Name</span>
+                                        <span class="customer-points" id="dispensing-customer-points">0 points</span>
+                                    </div>
+                                    <div class="loyalty-preview">
+                                        <span>Points to earn: <span id="points-to-earn">0</span></span>
+                                    </div>
+                                    <div class="loyalty-actions">
+                                        <button id="redeem-rewards-btn" class="btn btn-redeem">
+                                            <i class="fas fa-gift"></i> Redeem Rewards
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Discount Code Section -->
+                        <div class="discount-code-section">
+                            <div class="discount-header">
+                                <h4><i class="fas fa-percentage"></i> Discount Code</h4>
+                                <p>Enter discount code to apply special offers</p>
+                            </div>
+                            <div class="discount-code-input">
+                                <div class="input-group">
+                                    <i class="fas fa-ticket-alt"></i>
+                                    <input type="text" id="discount-code-input" placeholder="Enter discount code">
+                                    <button id="apply-discount-btn" class="btn btn-outline">
+                                        <i class="fas fa-check"></i> Apply
+                                    </button>
+                                </div>
+                                <div id="discount-info" class="discount-info" style="display: none;">
+                                    <div class="discount-details">
+                                        <span class="discount-name" id="applied-discount-name">Discount Name</span>
+                                        <span class="discount-value" id="applied-discount-value">0% off</span>
+                                    </div>
+                                    <div class="discount-preview">
+                                        <span>Discount: <span id="discount-amount">ر.س0.00</span></span>
+                                    </div>
+                                    <div class="discount-actions">
+                                        <button id="remove-discount-btn" class="btn btn-remove">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Apply Offer Section -->
+                        <div class="apply-offer-section">
+                            <div class="offer-header">
+                                <h4><i class="fas fa-gift"></i> Apply Offer</h4>
+                                <p>Select a special offer to apply to your cart</p>
+                            </div>
+                            <div class="offer-actions">
+                                <button id="apply-offer-btn" class="btn btn-success">
+                                    <i class="fas fa-gift"></i> Apply Offer
+                                </button>
+                                <div id="applied-offer-info" class="applied-offer-info" style="display: none;">
+                                    <div class="offer-details">
+                                        <span class="offer-name" id="applied-offer-name">Offer Name</span>
+                                        <span class="offer-type" id="applied-offer-type">BOGO</span>
+                                    </div>
+                                    <div class="offer-preview">
+                                        <span>Savings: <span id="offer-savings">ر.س0.00</span></span>
+                                    </div>
+                                    <div class="offer-actions">
+                                        <button id="remove-offer-btn" class="btn btn-remove">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="dispensing-cart">
@@ -324,7 +421,70 @@
                                 <button id="print-receipt-btn" class="btn btn-outline">
                                     <i class="fas fa-print"></i> Print Receipt
                                 </button>
+                                <button id="clear-cart-btn" class="btn btn-warning">
+                                    <i class="fas fa-trash"></i> Clear Cart
+                                </button>
                                 <button id="process-dispense" class="btn btn-success">Process Dispensing</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Discounts & Offers Section -->
+            <section id="discounts" class="content-section">
+                <div class="section-header">
+                    <h2>Discounts & Offers</h2>
+                    <p>Manage promotional discounts and special offers</p>
+                </div>
+
+                <div class="discounts-container">
+                    <!-- Discount Management -->
+                    <div class="discounts-main-content">
+                        <div class="discounts-actions">
+                            <button id="add-discount-btn" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Discount
+                            </button>
+                            <button id="add-offer-btn" class="btn btn-success">
+                                <i class="fas fa-gift"></i> Add Offer
+                            </button>
+                            <button id="refresh-discounts-btn" class="btn btn-outline">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+
+                        <!-- Active Discounts -->
+                        <div class="discounts-section">
+                            <h3><i class="fas fa-percentage"></i> Active Discounts</h3>
+                            <div id="active-discounts-list" class="discounts-list">
+                                <!-- Active discounts will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Special Offers -->
+                        <div class="offers-section">
+                            <h3><i class="fas fa-gift"></i> Special Offers</h3>
+                            <div id="active-offers-list" class="offers-list">
+                                <!-- Active offers will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Discount History -->
+                        <div class="discount-history-section">
+                            <h3><i class="fas fa-history"></i> Discount History</h3>
+                            <div class="history-filters">
+                                <select id="discount-history-filter">
+                                    <option value="all">All Discounts</option>
+                                    <option value="percentage">Percentage Discounts</option>
+                                    <option value="fixed">Fixed Amount Discounts</option>
+                                    <option value="bogo">BOGO Offers</option>
+                                    <option value="expired">Expired</option>
+                                </select>
+                                <input type="date" id="discount-date-from" placeholder="From Date">
+                                <input type="date" id="discount-date-to" placeholder="To Date">
+                            </div>
+                            <div id="discount-history-list" class="discount-history-list">
+                                <!-- Discount history will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -788,6 +948,269 @@
                     </div>
                     <div id="report-content" class="report-content">
                         <!-- Report content will be generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loyalty Program Section -->
+            <section id="loyalty" class="content-section">
+                <div class="section-header">
+                    <h2>Loyalty Program</h2>
+                    <p>Manage customer loyalty points and rewards</p>
+                    <div class="header-actions">
+                        <button id="add-customer-btn" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Add Customer
+                        </button>
+                        <button id="refresh-loyalty-btn" class="btn btn-outline">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loyalty Program Overview -->
+                <div class="loyalty-overview">
+                    <div class="loyalty-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-customers">0</h3>
+                                <p>Total Customers</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-points-issued">0</h3>
+                                <p>Points Issued</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-gift"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-points-redeemed">0</h3>
+                                <p>Points Redeemed</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-discounts-given">ر.س0.00</h3>
+                                <p>Discounts Given</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Lookup and Points Management -->
+                <div class="loyalty-main-content">
+                    <div class="customer-lookup-section">
+                        <div class="section-card">
+                            <div class="card-header">
+                                <h3>Customer Lookup & Points Management</h3>
+                                <p>Search for customers and manage their loyalty points</p>
+                            </div>
+                            
+                            <div class="customer-search-form">
+                                <div class="search-input-group">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="customer-search" placeholder="Search by customer name, phone, or ID">
+                                    <button id="search-customer-btn" class="btn btn-primary">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="customer-search-results" class="customer-search-results">
+                                <!-- Customer search results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Customer Details -->
+                    <div id="customer-details-section" class="customer-details-section" style="display: none;">
+                        <div class="section-card">
+                            <div class="card-header">
+                                <h3 id="selected-customer-name">Customer Name</h3>
+                                <div class="customer-actions">
+                                    <button id="edit-customer-btn" class="btn btn-outline btn-sm">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button id="view-customer-history-btn" class="btn btn-outline btn-sm">
+                                        <i class="fas fa-history"></i> History
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="customer-info-grid">
+                                <div class="info-item">
+                                    <label>Customer ID:</label>
+                                    <span id="customer-id">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Phone:</label>
+                                    <span id="customer-phone-display">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Email:</label>
+                                    <span id="customer-email-display">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Join Date:</label>
+                                    <span id="customer-join-date">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="points-display">
+                                <div class="points-card">
+                                    <div class="points-icon">
+                                        <i class="fas fa-coins"></i>
+                                    </div>
+                                    <div class="points-content">
+                                        <h2 id="customer-points">0</h2>
+                                        <p>Available Points</p>
+                                        <small>100 points = 2 SAR discount</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="points-actions">
+                                    <button id="add-points-btn" class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Add Points
+                                    </button>
+                                    <button id="redeem-points-btn" class="btn btn-warning">
+                                        <i class="fas fa-gift"></i> Redeem Points
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Points Redemption -->
+                    <div id="redemption-section" class="redemption-section" style="display: none;">
+                        <div class="section-card">
+                            <div class="card-header">
+                                <h3>Redeem Points</h3>
+                                <p>Use loyalty points to get discounts on purchases</p>
+                            </div>
+                            
+                            <div class="redemption-form">
+                                <div class="form-group">
+                                    <label for="redemption-amount">Points to Redeem</label>
+                                    <div class="input-group">
+                                        <input type="number" id="redemption-amount" min="100" step="100" placeholder="Enter points to redeem">
+                                        <span class="input-addon">points</span>
+                                    </div>
+                                    <small class="form-text">Minimum 100 points required. Each 100 points = 2 SAR discount</small>
+                                </div>
+                                
+                                <div class="redemption-preview">
+                                    <div class="preview-item">
+                                        <span>Points to Redeem:</span>
+                                        <span id="preview-points">0</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span>Discount Amount:</span>
+                                        <span id="preview-discount">ر.س0.00</span>
+                                    </div>
+                                    <div class="preview-item total">
+                                        <span>Remaining Points:</span>
+                                        <span id="preview-remaining">0</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="redemption-actions">
+                                    <button id="confirm-redemption-btn" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Confirm Redemption
+                                    </button>
+                                    <button id="cancel-redemption-btn" class="btn btn-outline">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer List -->
+                <div class="customers-list-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>All Customers</h3>
+                            <div class="list-controls">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="customers-filter" placeholder="Filter customers...">
+                                </div>
+                                <select id="customers-sort">
+                                    <option value="name">Sort by Name</option>
+                                    <option value="points">Sort by Points</option>
+                                    <option value="join-date">Sort by Join Date</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="customers-table-container">
+                            <table class="customers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer ID</th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Points</th>
+                                        <th>Join Date</th>
+                                        <th>Last Activity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customers-table-body">
+                                    <!-- Customers will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loyalty Program Reports -->
+                <div class="loyalty-reports-section">
+                    <div class="section-card">
+                        <div class="card-header">
+                            <h3>Loyalty Program Reports</h3>
+                            <div class="report-actions">
+                                <button id="generate-loyalty-report" class="btn btn-primary">
+                                    <i class="fas fa-chart-bar"></i> Generate Report
+                                </button>
+                                <button id="export-loyalty-data" class="btn btn-outline">
+                                    <i class="fas fa-download"></i> Export Data
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="reports-grid">
+                            <div class="report-card">
+                                <h4>Top Customers by Points</h4>
+                                <div id="top-customers-list" class="top-customers-list">
+                                    <!-- Top customers will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <div class="report-card">
+                                <h4>Recent Redemptions</h4>
+                                <div id="recent-redemptions-list" class="recent-redemptions-list">
+                                    <!-- Recent redemptions will be populated here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1494,6 +1917,108 @@
     </div>
     </div> <!-- End of main-app -->
 
+    <!-- Customer Modal -->
+    <div id="customer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="customer-modal-title">Add New Customer</h3>
+                <span class="close" id="close-customer-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="customer-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customer-name">Full Name *</label>
+                            <input type="text" id="customer-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-phone">Phone Number *</label>
+                            <input type="tel" id="customer-phone" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customer-email">Email Address</label>
+                            <input type="email" id="customer-email">
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-id">Customer ID</label>
+                            <input type="text" id="customer-id-input" placeholder="Auto-generated if left empty">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customer-address">Address</label>
+                        <textarea id="customer-address" rows="3" placeholder="Full address including city, state, and postal code"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customer-date-of-birth">Date of Birth</label>
+                            <input type="date" id="customer-date-of-birth">
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-gender">Gender</label>
+                            <select id="customer-gender">
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customer-notes">Notes</label>
+                        <textarea id="customer-notes" rows="3" placeholder="Additional notes about this customer"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-customer">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-customer">Save Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Points Modal -->
+    <div id="add-points-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Add Points to Customer</h3>
+                <span class="close" id="close-add-points-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="add-points-form">
+                    <div class="form-group">
+                        <label for="points-amount">Points to Add</label>
+                        <input type="number" id="points-amount" min="1" required placeholder="Enter points to add">
+                    </div>
+                    <div class="form-group">
+                        <label for="points-reason">Reason</label>
+                        <select id="points-reason" required>
+                            <option value="">Select Reason</option>
+                            <option value="purchase">Purchase Reward</option>
+                            <option value="manual">Manual Adjustment</option>
+                            <option value="bonus">Bonus Points</option>
+                            <option value="refund">Refund Adjustment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="points-notes">Notes (Optional)</label>
+                        <textarea id="points-notes" rows="2" placeholder="Additional notes about this points addition"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-add-points">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirm-add-points">Add Points</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Agent Modal -->
     <div id="agent-modal" class="modal">
         <div class="modal-content">
@@ -1582,6 +2107,275 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" id="cancel-agent">Cancel</button>
                 <button type="button" class="btn btn-primary" id="save-agent">Save Agent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discount Modal -->
+    <div id="discount-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-percentage"></i> Add Discount</h3>
+                <span class="close" id="close-discount-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="discount-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="discount-name">Discount Name *</label>
+                            <input type="text" id="discount-name" placeholder="e.g., Summer Sale 20%" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="discount-code">Discount Code</label>
+                            <input type="text" id="discount-code" placeholder="e.g., SUMMER20">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="discount-type">Discount Type *</label>
+                            <select id="discount-type" required>
+                                <option value="">Select Type</option>
+                                <option value="percentage">Percentage (%)</option>
+                                <option value="fixed">Fixed Amount (SAR)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="discount-value">Discount Value *</label>
+                            <input type="number" id="discount-value" placeholder="Enter value" min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="discount-min-amount">Minimum Purchase Amount</label>
+                            <input type="number" id="discount-min-amount" placeholder="0" min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="discount-max-amount">Maximum Discount Amount</label>
+                            <input type="number" id="discount-max-amount" placeholder="No limit" min="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="discount-start-date">Start Date *</label>
+                            <input type="datetime-local" id="discount-start-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="discount-end-date">End Date *</label>
+                            <input type="datetime-local" id="discount-end-date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="discount-description">Description</label>
+                        <textarea id="discount-description" rows="3" placeholder="Describe the discount offer..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="discount-products">Apply to Products</label>
+                        <div class="product-selection-container">
+                            <div class="product-selection-header">
+                                <button type="button" id="select-all-products" class="btn btn-sm btn-outline">Select All</button>
+                                <button type="button" id="clear-all-products" class="btn btn-sm btn-outline">Clear All</button>
+                                <span class="selected-count">0 products selected</span>
+                            </div>
+                            <div class="product-selection-list" id="discount-products-list">
+                                <!-- Products will be populated here -->
+                            </div>
+                        </div>
+                        <small>Leave empty to apply to all products</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="discount-active">
+                            <span class="checkmark"></span>
+                            Active (can be used immediately)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="save-discount" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Discount
+                </button>
+                <button id="cancel-discount" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOGO Offer Modal -->
+    <div id="offer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-gift"></i> Add Special Offer</h3>
+                <span class="close" id="close-offer-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="offer-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="offer-name">Offer Name *</label>
+                            <input type="text" id="offer-name" placeholder="e.g., Buy 1 Get 1 Free" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="offer-type">Offer Type *</label>
+                            <select id="offer-type" required>
+                                <option value="">Select Type</option>
+                                <option value="bogo">Buy 1 Get 1 Free</option>
+                                <option value="bogoh">Buy 1 Get 1 Half Price</option>
+                                <option value="b2g1">Buy 2 Get 1 Free</option>
+                                <option value="b3g1">Buy 3 Get 1 Free</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="offer-product">Product *</label>
+                            <select id="offer-product" required>
+                                <option value="">Select Product</option>
+                                <!-- Products will be populated here -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="offer-quantity">Minimum Quantity *</label>
+                            <input type="number" id="offer-quantity" placeholder="1" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="offer-start-date">Start Date *</label>
+                            <input type="datetime-local" id="offer-start-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="offer-end-date">End Date *</label>
+                            <input type="datetime-local" id="offer-end-date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="offer-description">Description</label>
+                        <textarea id="offer-description" rows="3" placeholder="Describe the offer..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="offer-active">
+                            <span class="checkmark"></span>
+                            Active (can be used immediately)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="save-offer" class="btn btn-success">
+                    <i class="fas fa-save"></i> Save Offer
+                </button>
+                <button id="cancel-offer" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dispensing Redemption Modal -->
+    <div id="dispensing-redemption-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-gift"></i> Redeem Loyalty Points</h3>
+                <span class="close" id="close-dispensing-redemption-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="redemption-info">
+                    <div class="customer-redemption-info">
+                        <h4 id="redemption-customer-name">Customer Name</h4>
+                        <p>Available Points: <span id="redemption-available-points">0</span></p>
+                        <p>Cart Total: <span id="redemption-cart-total">ر.س0.00</span></p>
+                    </div>
+                    
+                    <div class="redemption-form">
+                        <div class="input-group">
+                            <label for="redemption-points-amount">Points to Redeem:</label>
+                            <input type="number" id="redemption-points-amount" placeholder="Enter points to redeem" min="100" step="100">
+                            <small>Minimum: 100 points (ر.س2.00 discount)</small>
+                        </div>
+                        
+                        <div class="redemption-preview">
+                            <div class="preview-item">
+                                <span>Points Redeeming:</span>
+                                <span id="preview-points">0</span>
+                            </div>
+                            <div class="preview-item">
+                                <span>Discount Amount:</span>
+                                <span id="preview-discount">ر.س0.00</span>
+                            </div>
+                            <div class="preview-item total">
+                                <span>New Total:</span>
+                                <span id="preview-new-total">ر.س0.00</span>
+                            </div>
+                            <div class="preview-item">
+                                <span>Remaining Points:</span>
+                                <span id="preview-remaining-points">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-dispensing-redemption" class="btn btn-success">
+                    <i class="fas fa-check"></i> Apply Redemption
+                </button>
+                <button id="cancel-dispensing-redemption" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offer Selection Modal -->
+    <div id="offer-selection-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-gift"></i> Select Offer</h3>
+                <span class="close" id="close-offer-selection-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="offer-selection-info">
+                    <p>Choose an offer to apply to your cart. Only offers that match your cart items will be available.</p>
+                </div>
+                <div class="available-offers">
+                    <h4>Available Offers</h4>
+                    <div id="available-offers-list" class="offers-list">
+                        <!-- Available offers will be populated here -->
+                    </div>
+                </div>
+                <div class="offer-preview" id="offer-preview" style="display: none;">
+                    <h4>Offer Preview</h4>
+                    <div class="preview-details">
+                        <div class="preview-item">
+                            <span>Offer:</span>
+                            <span id="preview-offer-name">Offer Name</span>
+                        </div>
+                        <div class="preview-item">
+                            <span>Type:</span>
+                            <span id="preview-offer-type">BOGO</span>
+                        </div>
+                        <div class="preview-item">
+                            <span>Savings:</span>
+                            <span id="preview-offer-savings">ر.س0.00</span>
+                        </div>
+                        <div class="preview-item">
+                            <span>New Total:</span>
+                            <span id="preview-new-total">ر.س0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-offer-selection" class="btn btn-success" disabled>
+                    <i class="fas fa-check"></i> Apply Offer
+                </button>
+                <button id="cancel-offer-selection" class="btn btn-outline">Cancel</button>
             </div>
         </div>
     </div>
