@@ -3598,6 +3598,61 @@ class PharmacyManagementSystem {
             this.saveData('returnHistory', this.returnHistory);
             console.log('Sample return records created:', this.returnHistory);
         }
+
+        // Add sample attendance records if none exist
+        if (this.attendanceRecords.length === 0 && this.staff.length > 0) {
+            console.log('Creating sample attendance records...');
+            
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            // Generate sample attendance data for the current month
+            this.attendanceRecords = [];
+            
+            // Create attendance records for each staff member for the past 15 days
+            for (let i = 0; i < 15; i++) {
+                const recordDate = new Date(today.getTime() - (i * 24 * 60 * 60 * 1000));
+                const dateString = recordDate.toISOString().split('T')[0];
+                
+                // Skip weekends for some staff
+                const dayOfWeek = recordDate.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                
+                this.staff.forEach((staff, staffIndex) => {
+                    // Skip weekends for some staff (not all)
+                    if (isWeekend && staffIndex % 2 === 0) return;
+                    
+                    // Randomly skip some days (10% chance)
+                    if (Math.random() < 0.1) return;
+                    
+                    const clockInTime = new Date(recordDate);
+                    clockInTime.setHours(8 + Math.floor(Math.random() * 2), Math.floor(Math.random() * 60), 0, 0);
+                    
+                    const clockOutTime = new Date(clockInTime);
+                    const workHours = 7.5 + Math.random() * 1.5; // 7.5 to 9 hours
+                    clockOutTime.setHours(clockInTime.getHours() + Math.floor(workHours), clockInTime.getMinutes() + Math.floor((workHours % 1) * 60), 0, 0);
+                    
+                    const attendanceRecord = {
+                        id: `ATT${Date.now()}_${staffIndex}_${i}`,
+                        staffId: staff.id,
+                        staffName: staff.name,
+                        date: dateString,
+                        clockInTime: clockInTime.toISOString(),
+                        clockOutTime: clockOutTime.toISOString(),
+                        totalHours: workHours,
+                        status: 'present',
+                        notes: '',
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    this.attendanceRecords.push(attendanceRecord);
+                });
+            }
+            
+            this.saveData('attendanceRecords', this.attendanceRecords);
+            console.log('Sample attendance records created:', this.attendanceRecords.length);
+        }
     }
 
     closeModal(modalId) {
@@ -6832,11 +6887,11 @@ class PharmacyManagementSystem {
             if (!element) return;
             
             // Remove existing classes
-            element.classList.remove('countdown-warning', 'countdown-critical', 'countdown-completed');
+            element.classList.remove('countdown-warning', 'countdown-critical', 'countdown-completed', 'countdown-ready');
             
             // Add appropriate class based on remaining time
             if (remainingSeconds <= 0) {
-                element.classList.add('countdown-completed');
+                element.classList.add('countdown-ready');
             } else if (remainingSeconds <= 1800) { // 30 minutes
                 element.classList.add('countdown-critical');
             } else if (remainingSeconds <= 3600) { // 1 hour
@@ -6850,7 +6905,7 @@ class PharmacyManagementSystem {
         if (this.shiftCompleteShown) return;
         
         this.shiftCompleteShown = true;
-        this.showMessage('🎉 Work shift completed! You can now clock out.', 'success');
+        this.showMessage('🎉 Work shift completed! You can now clock out or clock in for a new shift.', 'success');
         
         // Reset flag after 5 seconds
         setTimeout(() => {
@@ -6869,7 +6924,8 @@ class PharmacyManagementSystem {
         
         if (todayRecord) {
             this.currentAttendance = todayRecord;
-            this.updateClockButtons(todayRecord.clockOutTime === null);
+            const isClockedIn = todayRecord.clockOutTime === null;
+            this.updateClockButtons(isClockedIn);
             this.updateTodaySummary(todayRecord);
         } else {
             this.currentAttendance = null;
@@ -6879,8 +6935,6 @@ class PharmacyManagementSystem {
     }
 
     updateClockButtons(isClockedIn) {
-        // Check if enough time has passed for next clock-in
-        const canClockIn = this.canClockInAgain();
         
         // Update attendance page buttons
         const clockInBtn = document.getElementById('clock-in-btn');
@@ -6895,6 +6949,7 @@ class PharmacyManagementSystem {
         const dashboardStatusText = document.querySelector('#dashboard-attendance-status .status-text');
         
         if (isClockedIn) {
+            // Staff is currently clocked in
             // Attendance page
             if (clockInBtn) clockInBtn.disabled = true;
             if (clockOutBtn) clockOutBtn.disabled = false;
@@ -6907,21 +6962,32 @@ class PharmacyManagementSystem {
             if (dashboardStatusIndicator) dashboardStatusIndicator.className = 'status-indicator online';
             if (dashboardStatusText) dashboardStatusText.textContent = 'Clocked In';
         } else {
-            // Check if can clock in again
+            // Staff is not clocked in - check if they can clock in again
+            const canClockIn = this.canClockInAgain();
+            
             if (canClockIn.allowed) {
+                // Can clock in - check if countdown is ready (0:00:00)
+                const isCountdownReady = this.isCountdownReady();
+                
                 // Attendance page
-                if (clockInBtn) clockInBtn.disabled = false;
+                if (clockInBtn) {
+                    clockInBtn.disabled = false;
+                    clockInBtn.textContent = isCountdownReady ? 'Clock In (Ready!)' : 'Clock In';
+                }
                 if (clockOutBtn) clockOutBtn.disabled = true;
                 if (statusIndicator) statusIndicator.className = 'status-indicator offline';
                 if (statusText) statusText.textContent = 'Not Clocked In';
                 
                 // Dashboard
-                if (dashboardClockInBtn) dashboardClockInBtn.disabled = false;
+                if (dashboardClockInBtn) {
+                    dashboardClockInBtn.disabled = false;
+                    dashboardClockInBtn.textContent = isCountdownReady ? 'Clock In (Ready!)' : 'Clock In';
+                }
                 if (dashboardClockOutBtn) dashboardClockOutBtn.disabled = true;
                 if (dashboardStatusIndicator) dashboardStatusIndicator.className = 'status-indicator offline';
                 if (dashboardStatusText) dashboardStatusText.textContent = 'Not Clocked In';
             } else {
-                // Show wait time
+                // Cannot clock in yet - show wait time
                 const waitText = `Wait ${canClockIn.remainingHours}h`;
                 
                 // Attendance page
@@ -6953,15 +7019,30 @@ class PharmacyManagementSystem {
         const lastClockIn = new Date(this.currentAttendance.clockInTime);
         const now = new Date();
         const timeSinceLastClockIn = now - lastClockIn;
-        const nineHoursInMs = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+        const eightHoursInMs = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
         
-        if (timeSinceLastClockIn >= nineHoursInMs) {
+        // Allow clock in again after 8 hours (when countdown reaches zero)
+        if (timeSinceLastClockIn >= eightHoursInMs) {
             return { allowed: true, remainingHours: 0 };
         } else {
-            const remainingTime = nineHoursInMs - timeSinceLastClockIn;
+            const remainingTime = eightHoursInMs - timeSinceLastClockIn;
             const remainingHours = Math.ceil(remainingTime / (60 * 60 * 1000));
             return { allowed: false, remainingHours: remainingHours };
         }
+    }
+
+    isCountdownReady() {
+        if (!this.currentAttendance || !this.currentAttendance.clockInTime) {
+            return false;
+        }
+
+        const clockInTime = new Date(this.currentAttendance.clockInTime);
+        const now = new Date();
+        const elapsedMs = now - clockInTime;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        const totalWorkSeconds = 8 * 60 * 60; // 8 hours in seconds
+        
+        return elapsedSeconds >= totalWorkSeconds;
     }
 
     updateTodaySummary(record) {
@@ -7050,10 +7131,10 @@ class PharmacyManagementSystem {
         if (this.currentAttendance && this.currentAttendance.clockInTime) {
             const lastClockIn = new Date(this.currentAttendance.clockInTime);
             const timeSinceLastClockIn = now - lastClockIn;
-            const nineHoursInMs = 9 * 60 * 60 * 1000; // 9 hours in milliseconds
+            const eightHoursInMs = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
             
-            if (timeSinceLastClockIn < nineHoursInMs) {
-                const remainingTime = nineHoursInMs - timeSinceLastClockIn;
+            if (timeSinceLastClockIn < eightHoursInMs) {
+                const remainingTime = eightHoursInMs - timeSinceLastClockIn;
                 const remainingHours = Math.ceil(remainingTime / (60 * 60 * 1000));
                 this.showMessage(`Please wait ${remainingHours} more hour(s) before clocking in again`, 'error');
                 return;
@@ -7398,8 +7479,195 @@ class PharmacyManagementSystem {
     }
 
     generateStaffAttendanceReport() {
-        // This would generate individual staff performance reports
-        this.showMessage('Staff attendance report functionality would be implemented here', 'info');
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        // Get all staff members
+        const allStaff = this.staff.filter(s => 
+            !this.currentPharmacy || s.pharmacyId === this.currentPharmacy.id
+        );
+        
+        if (allStaff.length === 0) {
+            this.showMessage('No staff members found', 'error');
+            return;
+        }
+        
+        // Get attendance records for current month
+        const monthlyRecords = this.attendanceRecords.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+        });
+        
+        // Calculate performance metrics for each staff member
+        const staffPerformance = allStaff.map(staff => {
+            const staffRecords = monthlyRecords.filter(record => record.staffId === staff.id);
+            
+            // Calculate basic metrics
+            const totalDays = staffRecords.length;
+            const presentDays = staffRecords.filter(record => record.status === 'present').length;
+            const absentDays = totalDays - presentDays;
+            const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+            
+            // Calculate total hours
+            const totalHours = staffRecords.reduce((sum, record) => sum + (record.totalHours || 0), 0);
+            const averageHoursPerDay = presentDays > 0 ? totalHours / presentDays : 0;
+            
+            // Calculate punctuality (clock in before 9 AM)
+            const punctualDays = staffRecords.filter(record => {
+                if (!record.clockInTime) return false;
+                const clockInHour = new Date(record.clockInTime).getHours();
+                return clockInHour < 9;
+            }).length;
+            const punctualityRate = presentDays > 0 ? (punctualDays / presentDays) * 100 : 0;
+            
+            // Calculate overtime (more than 8 hours)
+            const overtimeDays = staffRecords.filter(record => (record.totalHours || 0) > 8).length;
+            const overtimeRate = presentDays > 0 ? (overtimeDays / presentDays) * 100 : 0;
+            
+            // Calculate performance score (0-100)
+            const performanceScore = Math.round(
+                (attendanceRate * 0.4) + 
+                (punctualityRate * 0.3) + 
+                (Math.min(overtimeRate, 20) * 0.3) // Cap overtime bonus at 20%
+            );
+            
+            // Get recent activity (last 7 days)
+            const recentRecords = staffRecords.filter(record => {
+                const recordDate = new Date(record.date);
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                return recordDate >= sevenDaysAgo;
+            });
+            
+            return {
+                ...staff,
+                totalDays,
+                presentDays,
+                absentDays,
+                attendanceRate: Math.round(attendanceRate * 100) / 100,
+                totalHours: Math.round(totalHours * 100) / 100,
+                averageHoursPerDay: Math.round(averageHoursPerDay * 100) / 100,
+                punctualityRate: Math.round(punctualityRate * 100) / 100,
+                overtimeRate: Math.round(overtimeRate * 100) / 100,
+                performanceScore,
+                recentActivity: recentRecords.length,
+                lastAttendance: staffRecords.length > 0 ? 
+                    new Date(staffRecords[staffRecords.length - 1].date).toLocaleDateString('en-GB') : 
+                    'No records'
+            };
+        });
+        
+        // Sort by performance score (highest first)
+        staffPerformance.sort((a, b) => b.performanceScore - a.performanceScore);
+        
+        // Calculate overall statistics
+        const totalStaff = staffPerformance.length;
+        const avgAttendanceRate = staffPerformance.reduce((sum, staff) => sum + staff.attendanceRate, 0) / totalStaff;
+        const avgPerformanceScore = staffPerformance.reduce((sum, staff) => sum + staff.performanceScore, 0) / totalStaff;
+        const totalHoursWorked = staffPerformance.reduce((sum, staff) => sum + staff.totalHours, 0);
+        
+        const reportHTML = `
+            <div class="staff-performance-report">
+                <h3>Staff Performance Report - ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</h3>
+                
+                <div class="report-summary">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Staff</span>
+                            <span class="summary-value">${totalStaff}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Average Attendance</span>
+                            <span class="summary-value">${Math.round(avgAttendanceRate * 100) / 100}%</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Average Performance</span>
+                            <span class="summary-value">${Math.round(avgPerformanceScore)}/100</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Hours</span>
+                            <span class="summary-value">${Math.round(totalHoursWorked)}h</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="performance-table">
+                    <h4>Individual Staff Performance</h4>
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Role</th>
+                                <th>Days Worked</th>
+                                <th>Attendance Rate</th>
+                                <th>Total Hours</th>
+                                <th>Avg Hours/Day</th>
+                                <th>Punctuality</th>
+                                <th>Overtime Rate</th>
+                                <th>Performance Score</th>
+                                <th>Recent Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${staffPerformance.map(staff => `
+                                <tr class="${staff.performanceScore >= 80 ? 'high-performer' : staff.performanceScore >= 60 ? 'average-performer' : 'low-performer'}">
+                                    <td><strong>${staff.name}</strong></td>
+                                    <td>${this.formatPrivilegeLevel(staff.privilege)}</td>
+                                    <td>${staff.presentDays}/${staff.totalDays}</td>
+                                    <td>
+                                        <span class="percentage ${staff.attendanceRate >= 90 ? 'excellent' : staff.attendanceRate >= 80 ? 'good' : staff.attendanceRate >= 70 ? 'average' : 'poor'}">
+                                            ${staff.attendanceRate}%
+                                        </span>
+                                    </td>
+                                    <td>${staff.totalHours}h</td>
+                                    <td>${staff.averageHoursPerDay}h</td>
+                                    <td>
+                                        <span class="percentage ${staff.punctualityRate >= 80 ? 'excellent' : staff.punctualityRate >= 60 ? 'good' : 'average'}">
+                                            ${staff.punctualityRate}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="percentage ${staff.overtimeRate >= 20 ? 'excellent' : staff.overtimeRate >= 10 ? 'good' : 'average'}">
+                                            ${staff.overtimeRate}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="score ${staff.performanceScore >= 80 ? 'excellent' : staff.performanceScore >= 60 ? 'good' : 'average'}">
+                                            ${staff.performanceScore}/100
+                                        </span>
+                                    </td>
+                                    <td>${staff.recentActivity} days</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="performance-insights">
+                    <h4>Performance Insights</h4>
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <h5>Top Performers</h5>
+                            <p>${staffPerformance.filter(s => s.performanceScore >= 80).length} staff members with 80+ performance score</p>
+                        </div>
+                        <div class="insight-card">
+                            <h5>Attendance Leaders</h5>
+                            <p>${staffPerformance.filter(s => s.attendanceRate >= 95).length} staff members with 95%+ attendance</p>
+                        </div>
+                        <div class="insight-card">
+                            <h5>Punctuality Champions</h5>
+                            <p>${staffPerformance.filter(s => s.punctualityRate >= 90).length} staff members with 90%+ punctuality</p>
+                        </div>
+                        <div class="insight-card">
+                            <h5>Overtime Contributors</h5>
+                            <p>${staffPerformance.filter(s => s.overtimeRate >= 15).length} staff members with 15%+ overtime</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.displayReport('Staff Performance Report', reportHTML);
     }
 
     generateOvertimeReport() {

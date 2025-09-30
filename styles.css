@@ -209,7 +209,7 @@ body {
 
 .btn-success {
     background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-    color: white;
+    color: white !important;
 }
 
 .btn-success:hover {
@@ -230,7 +230,7 @@ body {
 
 .btn-danger {
     background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-    color: white;
+    color: white !important;
 }
 
 .btn-danger:hover {
@@ -7777,6 +7777,11 @@ select[multiple] option {
     animation: pulse-completed 2s infinite;
 }
 
+.current-time.countdown-ready {
+    color: #17a2b8;
+    animation: pulse-ready 1.5s infinite;
+}
+
 @keyframes pulse-warning {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
@@ -7790,6 +7795,11 @@ select[multiple] option {
 @keyframes pulse-completed {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes pulse-ready {
+    0%, 100% { transform: scale(1); color: #17a2b8; }
+    50% { transform: scale(1.1); color: #20c997; }
 }
 
 .current-date {
@@ -7813,16 +7823,40 @@ select[multiple] option {
     cursor: pointer;
     transition: all 0.3s ease;
     min-width: 140px;
+    color: white !important;
 }
 
 .clock-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    color: white !important;
 }
 
 .clock-btn:not(:disabled):hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Specific overrides for attendance page clock buttons */
+#clock-in-btn,
+#clock-out-btn,
+#dashboard-clock-in-btn,
+#dashboard-clock-out-btn {
+    color: white !important;
+}
+
+#clock-in-btn:disabled,
+#clock-out-btn:disabled,
+#dashboard-clock-in-btn:disabled,
+#dashboard-clock-out-btn:disabled {
+    color: white !important;
+}
+
+#clock-in-btn:hover,
+#clock-out-btn:hover,
+#dashboard-clock-in-btn:hover,
+#dashboard-clock-out-btn:hover {
+    color: white !important;
 }
 
 .clock-status {
@@ -8044,6 +8078,205 @@ select[multiple] option {
     gap: 10px;
 }
 
+/* Attendance Report Styles */
+.attendance-report {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.attendance-report h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    font-weight: 600;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.staff-attendance-table {
+    margin-top: 25px;
+}
+
+.staff-attendance-table h4 {
+    color: #555;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.attendance-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.attendance-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9em;
+}
+
+.attendance-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.attendance-table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.attendance-table tbody tr:nth-child(even):hover {
+    background-color: #e9ecef;
+}
+
+/* Staff Performance Report Styles */
+.staff-performance-report {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.staff-performance-report h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    font-weight: 600;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.performance-table {
+    margin-top: 25px;
+}
+
+.performance-table h4 {
+    color: #555;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+/* Performance row styling */
+.high-performer {
+    background-color: #d4edda !important;
+    border-left: 4px solid #28a745;
+}
+
+.average-performer {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107;
+}
+
+.low-performer {
+    background-color: #f8d7da !important;
+    border-left: 4px solid #dc3545;
+}
+
+/* Percentage and score styling */
+.percentage, .score {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.percentage.excellent, .score.excellent {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.percentage.good, .score.good {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.percentage.average, .score.average {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.percentage.poor {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Performance insights */
+.performance-insights {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #e9ecef;
+}
+
+.performance-insights h4 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.insight-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.insight-card h5 {
+    color: #333;
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.insight-card p {
+    color: #666;
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .performance-table {
+        overflow-x: auto;
+    }
+    
+    .attendance-table {
+        min-width: 800px;
+    }
+    
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .reports-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -8226,6 +8459,7 @@ select[multiple] option {
     transition: all 0.3s ease;
     min-width: 120px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    color: white !important;
 }
 
 .clock-actions .clock-btn:disabled {
@@ -8233,11 +8467,28 @@ select[multiple] option {
     cursor: not-allowed;
     transform: none !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    color: white !important;
 }
 
 .clock-actions .clock-btn:not(:disabled):hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+/* Specific overrides for clock buttons */
+.btn-success.clock-btn,
+.btn-danger.clock-btn {
+    color: white !important;
+}
+
+.btn-success.clock-btn:disabled,
+.btn-danger.clock-btn:disabled {
+    color: white !important;
+}
+
+.btn-success.clock-btn:hover,
+.btn-danger.clock-btn:hover {
+    color: white !important;
 }
 
 .attendance-summary {
@@ -8647,4 +8898,20 @@ body.has-warning {
         padding: 5px 10px;
         font-size: 0.8em;
     }
+}
+
+/* Force white color for all clock buttons - highest specificity */
+button[id*="clock-in-btn"],
+button[id*="clock-out-btn"] {
+    color: white !important;
+}
+
+button[id*="clock-in-btn"]:disabled,
+button[id*="clock-out-btn"]:disabled {
+    color: white !important;
+}
+
+button[id*="clock-in-btn"]:hover,
+button[id*="clock-out-btn"]:hover {
+    color: white !important;
 }
