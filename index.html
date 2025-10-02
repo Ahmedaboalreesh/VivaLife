@@ -166,6 +166,14 @@
                     <i class="fas fa-clock"></i>
                     <span>Attendance</span>
                 </li>
+                <li class="nav-item" data-section="clinics">
+                    <i class="fas fa-hospital"></i>
+                    <span>Clinics</span>
+                </li>
+                <li class="nav-item" data-section="internal-chat">
+                    <i class="fas fa-comments"></i>
+                    <span>Internal Chat</span>
+                </li>
                 <li class="nav-item" data-section="admin">
                     <i class="fas fa-cogs"></i>
                     <span>Admin</span>
@@ -516,6 +524,30 @@
                                     <i class="fas fa-trash"></i> Clear Cart
                                 </button>
                                 <button id="process-dispense" class="btn btn-success">Process Dispensing</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prescription Check Section -->
+                    <div class="prescription-check-section">
+                        <div class="prescription-header">
+                            <h4><i class="fas fa-prescription-bottle-alt"></i> Check Prescription</h4>
+                            <p>Look up and process prescriptions from clinics</p>
+                        </div>
+                        <div class="prescription-actions">
+                            <div class="prescription-search">
+                                <input type="text" id="prescription-search-input" class="form-control" placeholder="Search by prescription number, patient name, or physician...">
+                                <button class="btn btn-primary" id="search-prescription-btn">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                            <button class="btn btn-success" id="load-pending-prescriptions-btn">
+                                <i class="fas fa-list"></i> View Pending
+                            </button>
+                        </div>
+                        <div class="prescription-results" id="prescription-results" style="display: none;">
+                            <div class="prescription-list" id="prescription-list">
+                                <!-- Prescription results will be displayed here -->
                             </div>
                         </div>
                     </div>
@@ -1640,6 +1672,244 @@
                 </div>
             </section>
 
+            <!-- Clinics Section -->
+            <section id="clinics" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-hospital"></i> Clinics Management</h2>
+                    <p>Manage medical clinics, physicians, and prescription entries</p>
+                </div>
+
+                <div class="clinics-container">
+                    <!-- Clinic Management -->
+                    <div class="clinic-management">
+                        <div class="management-header">
+                            <h3><i class="fas fa-hospital"></i> Clinic Management</h3>
+                            <button class="btn btn-primary" id="add-clinic-btn">
+                                <i class="fas fa-plus"></i> Add New Clinic
+                            </button>
+                        </div>
+                        
+                        <div class="clinic-filters">
+                            <div class="filter-group">
+                                <input type="text" id="clinic-search" placeholder="Search clinics..." class="form-control">
+                            </div>
+                            <div class="filter-group">
+                                <select id="clinic-status-filter" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="clinics-table-container">
+                            <table class="clinics-table" id="clinics-table">
+                                <thead>
+                                    <tr>
+                                        <th>Clinic Name</th>
+                                        <th>Address</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Physicians</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clinics-table-body">
+                                    <!-- Clinics will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Physician Management -->
+                    <div class="physician-management">
+                        <div class="management-header">
+                            <h3><i class="fas fa-user-md"></i> Physician Management</h3>
+                            <button class="btn btn-success" id="add-physician-btn">
+                                <i class="fas fa-user-plus"></i> Add New Physician
+                            </button>
+                        </div>
+
+                        <div class="physician-filters">
+                            <div class="filter-group">
+                                <input type="text" id="physician-search" placeholder="Search physicians..." class="form-control">
+                            </div>
+                            <div class="filter-group">
+                                <select id="physician-clinic-filter" class="form-control">
+                                    <option value="">All Clinics</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="physicians-table-container">
+                            <table class="physicians-table" id="physicians-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Specialization</th>
+                                        <th>Clinic</th>
+                                        <th>License Number</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="physicians-table-body">
+                                    <!-- Physicians will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Prescription Management -->
+                    <div class="prescription-management">
+                        <div class="management-header">
+                            <h3><i class="fas fa-prescription-bottle-alt"></i> Prescription Management</h3>
+                            <button class="btn btn-info" id="add-prescription-btn">
+                                <i class="fas fa-plus"></i> New Prescription
+                            </button>
+                        </div>
+
+                        <div class="prescription-filters">
+                            <div class="filter-group">
+                                <input type="text" id="prescription-search" placeholder="Search prescriptions..." class="form-control">
+                            </div>
+                            <div class="filter-group">
+                                <select id="prescription-status-filter" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="dispensed">Dispensed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <input type="date" id="prescription-date-filter" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="prescriptions-table-container">
+                            <table class="prescriptions-table" id="prescriptions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Prescription #</th>
+                                        <th>Patient Name</th>
+                                        <th>Physician</th>
+                                        <th>Clinic</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prescriptions-table-body">
+                                    <!-- Prescriptions will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Internal Communication Section -->
+            <section id="internal-chat" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-comments"></i> Internal Communication</h2>
+                    <p>Chat and communicate with staff across all pharmacy branches</p>
+                </div>
+
+                <div class="chat-container">
+                    <!-- Chat Sidebar -->
+                    <div class="chat-sidebar">
+                        <div class="chat-sidebar-header">
+                            <h3>Contacts</h3>
+                            <button class="btn btn-primary btn-sm" id="new-chat-btn">
+                                <i class="fas fa-plus"></i> New Chat
+                            </button>
+                        </div>
+
+                        <!-- Chat Tabs -->
+                        <div class="chat-tabs">
+                            <button class="chat-tab active" data-tab="direct">
+                                <i class="fas fa-user"></i> Direct Messages
+                            </button>
+                            <button class="chat-tab" data-tab="groups">
+                                <i class="fas fa-users"></i> Group Chats
+                            </button>
+                            <button class="chat-tab" data-tab="broadcast">
+                                <i class="fas fa-bullhorn"></i> Announcements
+                            </button>
+                        </div>
+
+                        <!-- Staff Directory -->
+                        <div class="staff-directory" id="staff-directory">
+                            <div class="directory-search">
+                                <input type="text" id="staff-search" class="form-control" placeholder="Search staff...">
+                            </div>
+                            <div class="staff-list" id="staff-list">
+                                <!-- Staff members will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Chat List -->
+                        <div class="chat-list" id="chat-list">
+                            <!-- Active chats will be displayed here -->
+                        </div>
+                    </div>
+
+                    <!-- Chat Main Area -->
+                    <div class="chat-main">
+                        <!-- Chat Header -->
+                        <div class="chat-header" id="chat-header" style="display: none;">
+                            <div class="chat-header-info">
+                                <div class="chat-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="chat-details">
+                                    <h4 id="chat-title">Select a conversation</h4>
+                                    <span id="chat-status">Online</span>
+                                </div>
+                            </div>
+                            <div class="chat-actions">
+                                <button class="btn btn-outline btn-sm" id="chat-info-btn">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <button class="btn btn-outline btn-sm" id="clear-chat-btn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div class="chat-messages" id="internal-chat-messages">
+                            <div class="chat-welcome">
+                                <i class="fas fa-comments"></i>
+                                <h3>Welcome to Internal Communication</h3>
+                                <p>Select a staff member or group to start chatting</p>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="chat-input-container" id="chat-input-container" style="display: none;">
+                            <div class="chat-input">
+                                <input type="text" id="message-input" class="form-control" placeholder="Type your message...">
+                                <button class="btn btn-primary" id="send-message-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="chat-input-actions">
+                                <button class="btn btn-outline btn-sm" id="attach-file-btn">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <button class="btn btn-outline btn-sm" id="emoji-btn">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Admin Section -->
             <section id="admin" class="content-section">
                 <div class="section-header">
@@ -2053,9 +2323,6 @@
                 <div class="warning-actions">
                     <button id="go-to-dashboard-btn" class="btn btn-warning btn-sm">
                         <i class="fas fa-clock"></i> Go to Dashboard
-                    </button>
-                    <button id="dismiss-warning-btn" class="btn btn-outline btn-sm">
-                        <i class="fas fa-times"></i> Dismiss
                     </button>
                 </div>
             </div>
@@ -2868,6 +3135,249 @@
                 </button>
                 <button id="cancel-product-selection" class="btn btn-outline">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Clinic Modals -->
+    <!-- Add Clinic Modal -->
+    <div id="clinic-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="clinic-modal-title">Add New Clinic</h3>
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="clinic-form">
+                    <div class="form-group">
+                        <label for="clinic-name">Clinic Name *</label>
+                        <input type="text" id="clinic-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clinic-address">Address *</label>
+                        <textarea id="clinic-address" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clinic-phone">Phone *</label>
+                            <input type="tel" id="clinic-phone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clinic-email">Email *</label>
+                            <input type="email" id="clinic-email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clinic-license">License Number</label>
+                            <input type="text" id="clinic-license" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="clinic-status">Status</label>
+                            <select id="clinic-status" class="form-control">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clinic-notes">Notes</label>
+                        <textarea id="clinic-notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-clinic-btn">Save Clinic</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Physician Modal -->
+    <div id="physician-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="physician-modal-title">Add New Physician</h3>
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="physician-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physician-first-name">First Name *</label>
+                            <input type="text" id="physician-first-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="physician-last-name">Last Name *</label>
+                            <input type="text" id="physician-last-name" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physician-specialization">Specialization *</label>
+                            <select id="physician-specialization" class="form-control" required>
+                                <option value="">Select Specialization</option>
+                                <option value="General Practice">General Practice</option>
+                                <option value="Internal Medicine">Internal Medicine</option>
+                                <option value="Pediatrics">Pediatrics</option>
+                                <option value="Cardiology">Cardiology</option>
+                                <option value="Dermatology">Dermatology</option>
+                                <option value="Endocrinology">Endocrinology</option>
+                                <option value="Gastroenterology">Gastroenterology</option>
+                                <option value="Neurology">Neurology</option>
+                                <option value="Oncology">Oncology</option>
+                                <option value="Orthopedics">Orthopedics</option>
+                                <option value="Psychiatry">Psychiatry</option>
+                                <option value="Pulmonology">Pulmonology</option>
+                                <option value="Urology">Urology</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="physician-clinic">Clinic *</label>
+                            <select id="physician-clinic" class="form-control" required>
+                                <option value="">Select Clinic</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physician-license">License Number *</label>
+                            <input type="text" id="physician-license" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="physician-phone">Phone *</label>
+                            <input type="tel" id="physician-phone" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="physician-email">Email *</label>
+                        <input type="email" id="physician-email" class="form-control" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physician-status">Status</label>
+                            <select id="physician-status" class="form-control">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="physician-experience">Years of Experience</label>
+                            <input type="number" id="physician-experience" class="form-control" min="0" max="50">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-physician-btn">Save Physician</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Prescription Modal -->
+    <div id="prescription-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 id="prescription-modal-title">New Prescription</h3>
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="prescription-form">
+                    <div class="prescription-header">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="prescription-physician">Physician *</label>
+                                <select id="prescription-physician" class="form-control" required>
+                                    <option value="">Select Physician</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="prescription-date">Date *</label>
+                                <input type="date" id="prescription-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="patient-name">Patient Name *</label>
+                                <input type="text" id="patient-name" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="patient-age">Patient Age</label>
+                                <input type="number" id="patient-age" class="form-control" min="0" max="120">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="patient-phone">Patient Phone</label>
+                            <input type="tel" id="patient-phone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="prescription-notes">Clinical Notes</label>
+                            <textarea id="prescription-notes" class="form-control" rows="3" placeholder="Enter clinical notes, diagnosis, or special instructions..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="prescription-medications">
+                        <h4>Medications</h4>
+                        <div class="medication-list" id="medication-list">
+                            <!-- Medications will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-outline" id="add-medication-btn">
+                            <i class="fas fa-plus"></i> Add Medication
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-prescription-btn">Save Prescription</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medication Item Template -->
+    <div id="medication-item-template" style="display: none;">
+        <div class="medication-item">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Medication Name *</label>
+                    <div class="autocomplete-container">
+                        <input type="text" class="form-control medication-name" placeholder="Type medication name..." required autocomplete="off">
+                        <div class="autocomplete-suggestions" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Dosage *</label>
+                    <input type="text" class="form-control medication-dosage" placeholder="e.g., 500mg" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Frequency *</label>
+                    <select class="form-control medication-frequency" required>
+                        <option value="">Select Frequency</option>
+                        <option value="Once daily">Once daily</option>
+                        <option value="Twice daily">Twice daily</option>
+                        <option value="Three times daily">Three times daily</option>
+                        <option value="Four times daily">Four times daily</option>
+                        <option value="Every 6 hours">Every 6 hours</option>
+                        <option value="Every 8 hours">Every 8 hours</option>
+                        <option value="Every 12 hours">Every 12 hours</option>
+                        <option value="As needed">As needed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Duration *</label>
+                    <input type="text" class="form-control medication-duration" placeholder="e.g., 7 days" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Instructions</label>
+                <textarea class="form-control medication-instructions" rows="2" placeholder="Special instructions for taking this medication..."></textarea>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm remove-medication">
+                <i class="fas fa-trash"></i> Remove
+            </button>
         </div>
     </div>
 

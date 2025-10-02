@@ -59,8 +59,22 @@ class PharmacyManagementSystem {
         this.attendanceRecords = this.loadData('attendanceRecords') || [];
         this.currentAttendance = null; // Current day's attendance record
         this.clockInterval = null; // For updating the clock display
-        this.clockWarningDismissed = this.loadData('clockWarningDismissed') || false;
         this.shiftCompleteShown = false; // Flag to prevent duplicate shift complete messages
+        
+        // Clinics data
+        this.clinics = this.loadData('clinics') || [];
+        this.physicians = this.loadData('physicians') || [];
+        this.prescriptions = this.loadData('prescriptions') || [];
+        this.editingClinic = null;
+        this.editingPhysician = null;
+        this.editingPrescription = null;
+
+        // Internal Chat data
+        this.chatMessages = this.loadData('chatMessages') || [];
+        this.chatRooms = this.loadData('chatRooms') || [];
+        this.currentChatRoom = null;
+        this.currentChatUser = null;
+        this.chatRefreshInterval = null;
         
         this.init();
     }
@@ -182,7 +196,44 @@ class PharmacyManagementSystem {
 
         // Clock Warning Footer
         document.getElementById('go-to-dashboard-btn')?.addEventListener('click', () => this.goToDashboard());
-        document.getElementById('dismiss-warning-btn')?.addEventListener('click', () => this.dismissWarning());
+
+        // Clinics functionality
+        document.getElementById('add-clinic-btn')?.addEventListener('click', () => this.openClinicModal());
+        document.getElementById('save-clinic-btn')?.addEventListener('click', () => this.saveClinic());
+        document.getElementById('add-physician-btn')?.addEventListener('click', () => this.openPhysicianModal());
+        document.getElementById('save-physician-btn')?.addEventListener('click', () => this.savePhysician());
+        document.getElementById('add-prescription-btn')?.addEventListener('click', () => this.openPrescriptionModal());
+        document.getElementById('save-prescription-btn')?.addEventListener('click', () => this.savePrescription());
+        document.getElementById('add-medication-btn')?.addEventListener('click', () => this.addMedicationItem());
+        
+        // Filter events
+        document.getElementById('clinic-search')?.addEventListener('input', () => this.filterClinics());
+        document.getElementById('clinic-status-filter')?.addEventListener('change', () => this.filterClinics());
+        document.getElementById('physician-search')?.addEventListener('input', () => this.filterPhysicians());
+        document.getElementById('physician-clinic-filter')?.addEventListener('change', () => this.filterPhysicians());
+        document.getElementById('prescription-search')?.addEventListener('input', () => this.filterPrescriptions());
+        document.getElementById('prescription-status-filter')?.addEventListener('change', () => this.filterPrescriptions());
+        document.getElementById('prescription-date-filter')?.addEventListener('change', () => this.filterPrescriptions());
+
+        // Prescription Check functionality
+        document.getElementById('search-prescription-btn')?.addEventListener('click', () => this.searchPrescriptions());
+        document.getElementById('prescription-search-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchPrescriptions();
+        });
+        document.getElementById('load-pending-prescriptions-btn')?.addEventListener('click', () => this.loadPendingPrescriptions());
+
+        // Internal Chat functionality
+        document.getElementById('send-message-btn')?.addEventListener('click', () => this.sendMessage());
+        document.getElementById('message-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendMessage();
+        });
+        document.getElementById('staff-search')?.addEventListener('input', () => this.filterStaff());
+        document.getElementById('clear-chat-btn')?.addEventListener('click', () => this.clearCurrentChat());
+        
+        // Chat tabs
+        document.querySelectorAll('.chat-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => this.switchChatTab(e.target.dataset.tab));
+        });
 
         // Clinical Support System functionality
         document.getElementById('save-api-key').addEventListener('click', () => {
@@ -925,6 +976,12 @@ class PharmacyManagementSystem {
                 break;
             case 'attendance':
                 this.loadAttendance();
+                break;
+            case 'clinics':
+                this.loadClinics();
+                break;
+            case 'internal-chat':
+                this.loadInternalChat();
                 break;
             case 'admin':
                 this.loadAdmin();
@@ -3436,7 +3493,7 @@ class PharmacyManagementSystem {
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
                         'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'manage-staff',
-                        'view-reports', 'view-attendance', 'manage-attendance', 'admin-access', 'export-data', 'import-data'
+                        'view-reports', 'view-attendance', 'manage-attendance', 'view-clinics', 'manage-clinics', 'view-internal-chat', 'admin-access', 'export-data', 'import-data'
                     ],
                     isDefault: true
                 },
@@ -3447,7 +3504,7 @@ class PharmacyManagementSystem {
                     permissions: [
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products', 'delete-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
-                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'view-reports', 'view-attendance', 'manage-attendance', 'export-data'
+                        'view-rsd-tracking', 'view-loyalty', 'manage-loyalty', 'view-discounts', 'manage-discounts', 'view-staff', 'view-reports', 'view-attendance', 'manage-attendance', 'view-clinics', 'manage-clinics', 'view-internal-chat', 'export-data'
                     ],
                     isDefault: true
                 },
@@ -3458,7 +3515,7 @@ class PharmacyManagementSystem {
                     permissions: [
                         'view-dashboard', 'view-inventory', 'add-products', 'edit-products',
                         'process-dispensing', 'view-dispensing-history', 'process-returns', 'view-returns-history',
-                        'view-loyalty', 'manage-loyalty', 'view-discounts', 'view-reports', 'view-attendance'
+                        'view-loyalty', 'manage-loyalty', 'view-discounts', 'view-reports', 'view-attendance', 'view-clinics', 'view-internal-chat'
                     ],
                     isDefault: true
                 },
@@ -7682,10 +7739,8 @@ class PharmacyManagementSystem {
         const today = new Date().toISOString().split('T')[0];
         const lastWarningDate = this.loadData('lastWarningDate');
         
-        // Reset warning dismissed flag if it's a new day
+        // Reset warning date if it's a new day
         if (lastWarningDate !== today) {
-            this.clockWarningDismissed = false;
-            this.saveData('clockWarningDismissed', this.clockWarningDismissed);
             this.saveData('lastWarningDate', today);
         }
         
@@ -7697,10 +7752,9 @@ class PharmacyManagementSystem {
         // Show warning if:
         // 1. User is logged in
         // 2. No attendance record for today OR no clock-in time
-        // 3. Warning hasn't been dismissed
+        // 3. Show warning if not clocked in
         const shouldShowWarning = this.currentUser && 
-            (!todayRecord || !todayRecord.clockInTime) && 
-            !this.clockWarningDismissed;
+            (!todayRecord || !todayRecord.clockInTime);
             
         if (shouldShowWarning) {
             this.showClockWarning();
@@ -7730,10 +7784,1501 @@ class PharmacyManagementSystem {
         this.hideClockWarning();
     }
 
-    dismissWarning() {
-        this.clockWarningDismissed = true;
-        this.saveData('clockWarningDismissed', this.clockWarningDismissed);
-        this.hideClockWarning();
+
+    // ==================== PRESCRIPTION CHECK METHODS ====================
+
+    searchPrescriptions() {
+        const searchTerm = document.getElementById('prescription-search-input').value.trim();
+        if (!searchTerm) {
+            this.showMessage('Please enter a search term', 'warning');
+            return;
+        }
+
+        const filteredPrescriptions = this.prescriptions.filter(prescription => {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            return prescription.prescriptionNumber.toLowerCase().includes(lowerSearchTerm) ||
+                   prescription.patientName.toLowerCase().includes(lowerSearchTerm) ||
+                   prescription.physicianName.toLowerCase().includes(lowerSearchTerm) ||
+                   prescription.clinicName.toLowerCase().includes(lowerSearchTerm);
+        });
+
+        this.displayPrescriptionResults(filteredPrescriptions, `Search results for "${searchTerm}"`);
+    }
+
+    loadPendingPrescriptions() {
+        const pendingPrescriptions = this.prescriptions.filter(prescription => prescription.status === 'pending');
+        this.displayPrescriptionResults(pendingPrescriptions, 'Pending Prescriptions');
+    }
+
+    displayPrescriptionResults(prescriptions, title) {
+        const resultsDiv = document.getElementById('prescription-results');
+        const listDiv = document.getElementById('prescription-list');
+
+        if (prescriptions.length === 0) {
+            listDiv.innerHTML = `
+                <div class="no-prescriptions">
+                    <i class="fas fa-search"></i>
+                    <h5>No Prescriptions Found</h5>
+                    <p>No prescriptions match your search criteria.</p>
+                </div>
+            `;
+        } else {
+            listDiv.innerHTML = prescriptions.map(prescription => this.createPrescriptionItem(prescription)).join('');
+        }
+
+        resultsDiv.style.display = 'block';
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    createPrescriptionItem(prescription) {
+        const medicationsList = prescription.medications.map(med => 
+            `<div class="medication-summary">
+                <strong>${med.name}</strong> - ${med.dosage} | ${med.frequency} | ${med.duration}
+                ${med.instructions ? `<br><small>Instructions: ${med.instructions}</small>` : ''}
+            </div>`
+        ).join('');
+
+        return `
+            <div class="prescription-item" data-prescription-id="${prescription.id}">
+                <div class="prescription-item-header">
+                    <div class="prescription-number">${prescription.prescriptionNumber}</div>
+                    <div class="prescription-status ${prescription.status}">${prescription.status}</div>
+                </div>
+                <div class="prescription-details">
+                    <div class="prescription-detail">
+                        <div class="prescription-detail-label">Patient</div>
+                        <div class="prescription-detail-value">${prescription.patientName}${prescription.patientAge ? ` (${prescription.patientAge} years)` : ''}</div>
+                    </div>
+                    <div class="prescription-detail">
+                        <div class="prescription-detail-label">Physician</div>
+                        <div class="prescription-detail-value">${prescription.physicianName}</div>
+                    </div>
+                    <div class="prescription-detail">
+                        <div class="prescription-detail-label">Clinic</div>
+                        <div class="prescription-detail-value">${prescription.clinicName}</div>
+                    </div>
+                    <div class="prescription-detail">
+                        <div class="prescription-detail-label">Date</div>
+                        <div class="prescription-detail-value">${new Date(prescription.date).toLocaleDateString('en-GB')}</div>
+                    </div>
+                </div>
+                <div class="prescription-medications">
+                    <h6>Medications (${prescription.medications.length})</h6>
+                    ${medicationsList}
+                </div>
+                <div class="prescription-actions-buttons">
+                    <button class="btn btn-info btn-sm" onclick="pharmacySystem.viewPrescriptionDetails('${prescription.id}')">
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="pharmacySystem.addPrescriptionToCart('${prescription.id}')" ${prescription.status === 'dispensed' ? 'disabled' : ''}>
+                        <i class="fas fa-cart-plus"></i> Add to Cart
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="pharmacySystem.markPrescriptionDispensed('${prescription.id}')" ${prescription.status === 'dispensed' ? 'disabled' : ''}>
+                        <i class="fas fa-check"></i> Mark Dispensed
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    viewPrescriptionDetails(prescriptionId) {
+        const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+        if (!prescription) return;
+
+        const medicationsList = prescription.medications.map(med => `
+            <div class="medication-item">
+                <h5>${med.name} - ${med.dosage}</h5>
+                <p><strong>Frequency:</strong> ${med.frequency}</p>
+                <p><strong>Duration:</strong> ${med.duration}</p>
+                ${med.sku ? `<p><strong>SKU:</strong> ${med.sku}</p>` : ''}
+                ${med.stock !== null ? `<p><strong>Available Stock:</strong> ${med.stock}</p>` : ''}
+                ${med.price !== null ? `<p><strong>Price:</strong> ${this.formatCurrency(med.price)}</p>` : ''}
+                ${med.instructions ? `<p><strong>Instructions:</strong> ${med.instructions}</p>` : ''}
+            </div>
+        `).join('');
+
+        const prescriptionHTML = `
+            <div class="prescription-details">
+                <h3>Prescription Details - ${prescription.prescriptionNumber}</h3>
+                <div class="prescription-info">
+                    <div class="info-row">
+                        <strong>Patient:</strong> ${prescription.patientName}
+                        ${prescription.patientAge ? ` (Age: ${prescription.patientAge})` : ''}
+                        ${prescription.patientPhone ? ` | Phone: ${prescription.patientPhone}` : ''}
+                    </div>
+                    <div class="info-row">
+                        <strong>Physician:</strong> ${prescription.physicianName}
+                    </div>
+                    <div class="info-row">
+                        <strong>Clinic:</strong> ${prescription.clinicName}
+                    </div>
+                    <div class="info-row">
+                        <strong>Date:</strong> ${new Date(prescription.date).toLocaleDateString('en-GB')}
+                    </div>
+                    <div class="info-row">
+                        <strong>Status:</strong> <span class="status-badge ${prescription.status}">${prescription.status}</span>
+                    </div>
+                    ${prescription.notes ? `<div class="info-row"><strong>Notes:</strong> ${prescription.notes}</div>` : ''}
+                </div>
+                <div class="medications-section">
+                    <h4>Medications</h4>
+                    ${medicationsList}
+                </div>
+            </div>
+        `;
+
+        this.displayReport('Prescription Details', prescriptionHTML);
+    }
+
+    addPrescriptionToCart(prescriptionId) {
+        const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+        if (!prescription) return;
+
+        if (prescription.status === 'dispensed') {
+            this.showMessage('This prescription has already been dispensed', 'warning');
+            return;
+        }
+
+        // Check stock availability for all medications
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const unavailableMedications = [];
+
+        prescription.medications.forEach(med => {
+            const product = this.products.find(p => 
+                p.pharmacyId === currentPharmacyId && 
+                p.name.toLowerCase() === med.name.toLowerCase()
+            );
+            
+            if (!product || product.currentStock <= 0) {
+                unavailableMedications.push(med.name);
+            }
+        });
+
+        if (unavailableMedications.length > 0) {
+            this.showMessage(`The following medications are not available in stock: ${unavailableMedications.join(', ')}`, 'error');
+            return;
+        }
+
+        // Add medications to cart
+        prescription.medications.forEach(med => {
+            const product = this.products.find(p => 
+                p.pharmacyId === currentPharmacyId && 
+                p.name.toLowerCase() === med.name.toLowerCase()
+            );
+            
+            if (product) {
+                // Check if product already exists in cart
+                const existingCartItem = this.cart.find(item => item.sku === product.sku);
+                
+                if (existingCartItem) {
+                    existingCartItem.quantity += 1;
+                } else {
+                    this.cart.push({
+                        sku: product.sku,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        category: product.category,
+                        currentStock: product.currentStock
+                    });
+                }
+            }
+        });
+
+        // Update cart display
+        this.renderCart();
+        this.showMessage(`Prescription ${prescription.prescriptionNumber} added to cart successfully`, 'success');
+        
+        // Update prescription results display
+        this.refreshPrescriptionResults();
+    }
+
+    markPrescriptionDispensed(prescriptionId) {
+        if (confirm('Mark this prescription as dispensed?')) {
+            const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+            if (prescription) {
+                prescription.status = 'dispensed';
+                prescription.dispensedAt = new Date().toISOString();
+                prescription.dispensedBy = this.currentUser ? this.currentUser.id : 'system';
+                this.saveData('prescriptions', this.prescriptions);
+                this.refreshPrescriptionResults();
+                this.showMessage('Prescription marked as dispensed', 'success');
+            }
+        }
+    }
+
+    refreshPrescriptionResults() {
+        const resultsDiv = document.getElementById('prescription-results');
+        if (resultsDiv.style.display !== 'none') {
+            // Refresh the current view
+            const searchInput = document.getElementById('prescription-search-input');
+            if (searchInput.value.trim()) {
+                this.searchPrescriptions();
+            } else {
+                this.loadPendingPrescriptions();
+            }
+        }
+    }
+
+    // ==================== INTERNAL CHAT METHODS ====================
+
+    loadInternalChat() {
+        this.loadStaffDirectory();
+        this.loadChatRooms();
+        this.startChatRefresh();
+    }
+
+    loadStaffDirectory() {
+        const staffList = document.getElementById('staff-list');
+        if (!staffList) return;
+
+        // Get all staff from all pharmacies
+        const allStaff = this.staff.filter(staff => staff.id !== (this.currentUser ? this.currentUser.id : ''));
+        
+        staffList.innerHTML = allStaff.map(staff => {
+            const initials = this.getStaffInitials(staff.name);
+            const pharmacy = this.pharmacies.find(p => p.id === staff.pharmacyId);
+            const pharmacyName = pharmacy ? pharmacy.name : 'Unknown';
+            
+            return `
+                <div class="staff-item" data-staff-id="${staff.id}" onclick="pharmacySystem.startDirectChat('${staff.id}')">
+                    <div class="staff-avatar">${initials}</div>
+                    <div class="staff-info">
+                        <div class="staff-name">${staff.name}</div>
+                        <div class="staff-role">${staff.role} - ${pharmacyName}</div>
+                    </div>
+                    <div class="staff-status online"></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getStaffInitials(name) {
+        if (!name || typeof name !== 'string') {
+            return 'U'; // Default to 'U' for Unknown
+        }
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    }
+
+    filterStaff() {
+        const searchTerm = document.getElementById('staff-search').value.toLowerCase();
+        const staffItems = document.querySelectorAll('.staff-item');
+        
+        staffItems.forEach(item => {
+            const name = item.querySelector('.staff-name').textContent.toLowerCase();
+            const role = item.querySelector('.staff-role').textContent.toLowerCase();
+            const matches = name.includes(searchTerm) || role.includes(searchTerm);
+            item.style.display = matches ? 'flex' : 'none';
+        });
+    }
+
+    switchChatTab(tab) {
+        // Update active tab
+        document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        
+        // Show/hide appropriate content
+        const staffDirectory = document.getElementById('staff-directory');
+        const chatList = document.getElementById('chat-list');
+        
+        switch(tab) {
+            case 'direct':
+                staffDirectory.style.display = 'block';
+                chatList.style.display = 'none';
+                this.loadStaffDirectory();
+                break;
+            case 'groups':
+                staffDirectory.style.display = 'none';
+                chatList.style.display = 'block';
+                this.loadGroupChats();
+                break;
+            case 'broadcast':
+                staffDirectory.style.display = 'none';
+                chatList.style.display = 'block';
+                this.loadBroadcastMessages();
+                break;
+        }
+    }
+
+    startDirectChat(staffId) {
+        const staff = this.staff.find(s => s.id === staffId);
+        if (!staff) return;
+
+        // Create or find existing chat room
+        const roomId = this.createDirectChatRoom(staffId);
+        this.currentChatRoom = roomId;
+        this.currentChatUser = staff;
+        
+        // Update UI
+        this.showChatInterface(staff);
+        this.loadChatMessages(roomId);
+        
+        // Update active staff item
+        document.querySelectorAll('.staff-item').forEach(item => item.classList.remove('active'));
+        document.querySelector(`[data-staff-id="${staffId}"]`)?.classList.add('active');
+    }
+
+    createDirectChatRoom(staffId) {
+        const currentUserId = this.currentUser ? this.currentUser.id : 'system';
+        const roomId = [currentUserId, staffId].sort().join('_');
+        
+        // Check if room already exists
+        if (!this.chatRooms.find(room => room.id === roomId)) {
+            const newRoom = {
+                id: roomId,
+                type: 'direct',
+                participants: [currentUserId, staffId],
+                createdAt: new Date().toISOString(),
+                lastActivity: new Date().toISOString()
+            };
+            
+            this.chatRooms.push(newRoom);
+            this.saveData('chatRooms', this.chatRooms);
+        }
+        
+        return roomId;
+    }
+
+    showChatInterface(staff) {
+        const chatHeader = document.getElementById('chat-header');
+        const chatInputContainer = document.getElementById('chat-input-container');
+        const chatTitle = document.getElementById('chat-title');
+        const chatStatus = document.getElementById('chat-status');
+        const chatAvatar = document.querySelector('.chat-avatar i');
+        
+        chatHeader.style.display = 'flex';
+        chatInputContainer.style.display = 'block';
+        chatTitle.textContent = staff.name;
+        chatStatus.textContent = 'Online';
+        chatAvatar.className = 'fas fa-user';
+        
+        console.log('Showing chat interface for:', staff.name);
+        
+        // Hide welcome message
+        const welcomeMessage = document.querySelector('.chat-welcome');
+        if (welcomeMessage) {
+            welcomeMessage.style.display = 'none';
+        }
+    }
+
+    loadChatMessages(roomId) {
+        const chatMessages = document.getElementById('internal-chat-messages');
+        if (!chatMessages) {
+            console.error('Chat messages container not found!');
+            return;
+        }
+        
+        const messages = this.chatMessages.filter(msg => msg.roomId === roomId);
+        
+        console.log('Loading messages for room:', roomId);
+        console.log('Found messages:', messages.length);
+        console.log('All chat messages:', this.chatMessages.length);
+        console.log('Current room messages:', messages);
+        
+        if (messages.length === 0) {
+            chatMessages.innerHTML = `
+                <div class="chat-welcome">
+                    <i class="fas fa-comments"></i>
+                    <h3>Start a conversation</h3>
+                    <p>Send a message to begin chatting</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Sort messages by timestamp first
+        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        // Simple approach - just render all messages in order without date grouping for now
+        let messagesHTML = '';
+        
+        messages.forEach(message => {
+            messagesHTML += this.createMessageHTML(message);
+        });
+        
+        console.log('Generated HTML length:', messagesHTML.length);
+        console.log('Setting innerHTML...');
+        
+        chatMessages.innerHTML = messagesHTML;
+        
+        // Force a reflow to ensure DOM is updated
+        chatMessages.offsetHeight;
+        
+        console.log('Messages container after update:', chatMessages.innerHTML.length);
+        
+        // Add a mutation observer to detect if something is changing our content
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                    console.warn('Chat messages container was modified externally!', mutation);
+                    console.log('New content length:', chatMessages.innerHTML.length);
+                    console.log('New content:', chatMessages.innerHTML.substring(0, 200) + '...');
+                }
+            });
+        });
+        
+        observer.observe(chatMessages, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+        
+        // Disconnect observer after 5 seconds
+        setTimeout(() => {
+            observer.disconnect();
+        }, 5000);
+        
+        // Scroll to bottom
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 100);
+    }
+
+    groupMessagesByDate(messages) {
+        const groups = {};
+        
+        messages.forEach(message => {
+            const date = new Date(message.timestamp).toLocaleDateString('en-GB', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(message);
+        });
+        
+        return groups;
+    }
+
+    createMessageHTML(message) {
+        const currentUserId = this.currentUser ? this.currentUser.id : 'system';
+        const isSent = message.senderId === currentUserId;
+        const sender = this.staff.find(s => s.id === message.senderId);
+        const senderName = sender ? sender.name : 'Unknown';
+        const initials = this.getStaffInitials(senderName);
+        const time = new Date(message.timestamp).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        console.log('Creating message HTML for:', {
+            messageId: message.id,
+            content: message.content,
+            isSent,
+            senderName,
+            initials,
+            time
+        });
+        
+        const html = `
+            <div class="message ${isSent ? 'sent' : 'received'}">
+                ${!isSent ? `<div class="message-avatar">${initials}</div>` : ''}
+                <div class="message-content">
+                    <div class="message-bubble">${message.content}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+                ${isSent ? `<div class="message-avatar">${this.getStaffInitials(this.currentUser ? this.currentUser.name : 'You')}</div>` : ''}
+            </div>
+        `;
+        
+        console.log('Generated HTML:', html);
+        return html;
+    }
+
+    sendMessage() {
+        const messageInput = document.getElementById('message-input');
+        const content = messageInput.value.trim();
+        
+        if (!content || !this.currentChatRoom) {
+            console.log('Cannot send message - missing content or room:', { content, currentChatRoom: this.currentChatRoom });
+            return;
+        }
+        
+        const message = {
+            id: this.generateUniqueId(),
+            roomId: this.currentChatRoom,
+            senderId: this.currentUser ? this.currentUser.id : 'system',
+            content: content,
+            timestamp: new Date().toISOString(),
+            type: 'text'
+        };
+        
+        console.log('Sending message:', message);
+        
+        this.chatMessages.push(message);
+        this.saveData('chatMessages', this.chatMessages);
+        
+        console.log('Total messages after sending:', this.chatMessages.length);
+        console.log('Messages for current room:', this.chatMessages.filter(msg => msg.roomId === this.currentChatRoom).length);
+        
+        // Verify the message was actually added
+        const addedMessage = this.chatMessages.find(msg => msg.id === message.id);
+        console.log('Message was added to array:', !!addedMessage);
+        console.log('Added message details:', addedMessage);
+        
+        // Update room last activity
+        const room = this.chatRooms.find(r => r.id === this.currentChatRoom);
+        if (room) {
+            room.lastActivity = new Date().toISOString();
+            this.saveData('chatRooms', this.chatRooms);
+        }
+        
+        // Clear input and reload messages
+        messageInput.value = '';
+        
+        // Try a direct approach first
+        console.log('About to reload messages...');
+        this.loadChatMessages(this.currentChatRoom);
+        
+        // Also try adding the message directly to the DOM as a fallback
+        setTimeout(() => {
+            const chatMessagesContainer = document.getElementById('internal-chat-messages');
+            if (chatMessagesContainer) {
+                const currentHTML = chatMessagesContainer.innerHTML;
+                console.log('Current chat HTML length:', currentHTML.length);
+                
+                // If still showing welcome message, replace it
+                if (currentHTML.includes('chat-welcome')) {
+                    console.log('Still showing welcome message, forcing message display...');
+                    const messageHTML = this.createMessageHTML(message);
+                    chatMessagesContainer.innerHTML = messageHTML;
+                }
+            }
+        }, 200);
+        
+        this.showMessage('Message sent', 'success');
+    }
+
+    clearCurrentChat() {
+        if (!this.currentChatRoom) return;
+        
+        if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
+            // Remove messages for this room
+            this.chatMessages = this.chatMessages.filter(msg => msg.roomId !== this.currentChatRoom);
+            this.saveData('chatMessages', this.chatMessages);
+            
+            // Reload messages
+            this.loadChatMessages(this.currentChatRoom);
+            this.showMessage('Internal chat cleared', 'success');
+        }
+    }
+
+    loadGroupChats() {
+        const chatList = document.getElementById('chat-list');
+        chatList.innerHTML = `
+            <div class="no-prescriptions">
+                <i class="fas fa-users"></i>
+                <h5>Group Chats</h5>
+                <p>Group chat functionality coming soon...</p>
+            </div>
+        `;
+    }
+
+    loadBroadcastMessages() {
+        const chatList = document.getElementById('chat-list');
+        chatList.innerHTML = `
+            <div class="no-prescriptions">
+                <i class="fas fa-bullhorn"></i>
+                <h5>Announcements</h5>
+                <p>Broadcast messaging functionality coming soon...</p>
+            </div>
+        `;
+    }
+
+    loadChatRooms() {
+        // Load existing chat rooms and update UI
+        console.log('Loading chat rooms:', this.chatRooms.length);
+    }
+
+    startChatRefresh() {
+        // Start periodic refresh for new messages (simulate real-time)
+        if (this.chatRefreshInterval) {
+            clearInterval(this.chatRefreshInterval);
+        }
+        
+        this.chatRefreshInterval = setInterval(() => {
+            if (this.currentChatRoom) {
+                // In a real application, this would check for new messages from server
+                // For now, we'll just refresh if there are new messages locally
+            }
+        }, 5000); // Refresh every 5 seconds
+    }
+
+    // ==================== CLINICS MANAGEMENT METHODS ====================
+
+    loadClinics() {
+        this.renderClinicsTable();
+        this.renderPhysiciansTable();
+        this.renderPrescriptionsTable();
+        this.populateClinicSelects();
+    }
+
+    // Clinic Management
+    openClinicModal(clinic = null) {
+        this.editingClinic = clinic;
+        const modal = document.getElementById('clinic-modal');
+        const title = document.getElementById('clinic-modal-title');
+        
+        if (clinic) {
+            title.textContent = 'Edit Clinic';
+            this.populateClinicForm(clinic);
+        } else {
+            title.textContent = 'Add New Clinic';
+            document.getElementById('clinic-form').reset();
+        }
+        
+        modal.style.display = 'block';
+    }
+
+    populateClinicForm(clinic) {
+        document.getElementById('clinic-name').value = clinic.name || '';
+        document.getElementById('clinic-address').value = clinic.address || '';
+        document.getElementById('clinic-phone').value = clinic.phone || '';
+        document.getElementById('clinic-email').value = clinic.email || '';
+        document.getElementById('clinic-license').value = clinic.licenseNumber || '';
+        document.getElementById('clinic-status').value = clinic.status || 'active';
+        document.getElementById('clinic-notes').value = clinic.notes || '';
+    }
+
+    saveClinic() {
+        const name = document.getElementById('clinic-name').value.trim();
+        const address = document.getElementById('clinic-address').value.trim();
+        const phone = document.getElementById('clinic-phone').value.trim();
+        const email = document.getElementById('clinic-email').value.trim();
+        const licenseNumber = document.getElementById('clinic-license').value.trim();
+        const status = document.getElementById('clinic-status').value;
+        const notes = document.getElementById('clinic-notes').value.trim();
+
+        if (!name || !address || !phone || !email) {
+            this.showMessage('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const clinicData = {
+            id: this.editingClinic ? this.editingClinic.id : this.generateUniqueId(),
+            name,
+            address,
+            phone,
+            email,
+            licenseNumber,
+            status,
+            notes,
+            createdAt: this.editingClinic ? this.editingClinic.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (this.editingClinic) {
+            const index = this.clinics.findIndex(c => c.id === this.editingClinic.id);
+            if (index !== -1) {
+                this.clinics[index] = clinicData;
+            }
+        } else {
+            this.clinics.push(clinicData);
+        }
+
+        this.saveData('clinics', this.clinics);
+        this.renderClinicsTable();
+        this.populateClinicSelects();
+        this.closeModal('clinic-modal');
+        this.showMessage(`Clinic ${this.editingClinic ? 'updated' : 'added'} successfully`, 'success');
+        
+        this.editingClinic = null;
+    }
+
+    renderClinicsTable() {
+        const tbody = document.getElementById('clinics-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = this.clinics.map(clinic => `
+            <tr>
+                <td><strong>${clinic.name}</strong></td>
+                <td>${clinic.address}</td>
+                <td>${clinic.phone}</td>
+                <td>${clinic.email}</td>
+                <td>${this.physicians.filter(p => p.clinicId === clinic.id).length}</td>
+                <td><span class="status-badge ${clinic.status}">${clinic.status}</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editClinic('${clinic.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="pharmacySystem.deleteClinic('${clinic.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    editClinic(clinicId) {
+        const clinic = this.clinics.find(c => c.id === clinicId);
+        if (clinic) {
+            this.openClinicModal(clinic);
+        }
+    }
+
+    deleteClinic(clinicId) {
+        if (confirm('Are you sure you want to delete this clinic?')) {
+            this.clinics = this.clinics.filter(c => c.id !== clinicId);
+            this.physicians = this.physicians.filter(p => p.clinicId !== clinicId);
+            this.saveData('clinics', this.clinics);
+            this.saveData('physicians', this.physicians);
+            this.renderClinicsTable();
+            this.renderPhysiciansTable();
+            this.populateClinicSelects();
+            this.showMessage('Clinic deleted successfully', 'success');
+        }
+    }
+
+    // Physician Management
+    openPhysicianModal(physician = null) {
+        this.editingPhysician = physician;
+        const modal = document.getElementById('physician-modal');
+        const title = document.getElementById('physician-modal-title');
+        
+        if (physician) {
+            title.textContent = 'Edit Physician';
+            this.populatePhysicianForm(physician);
+        } else {
+            title.textContent = 'Add New Physician';
+            document.getElementById('physician-form').reset();
+        }
+        
+        this.populateClinicSelects();
+        modal.style.display = 'block';
+    }
+
+    populatePhysicianForm(physician) {
+        document.getElementById('physician-first-name').value = physician.firstName || '';
+        document.getElementById('physician-last-name').value = physician.lastName || '';
+        document.getElementById('physician-specialization').value = physician.specialization || '';
+        document.getElementById('physician-clinic').value = physician.clinicId || '';
+        document.getElementById('physician-license').value = physician.licenseNumber || '';
+        document.getElementById('physician-phone').value = physician.phone || '';
+        document.getElementById('physician-email').value = physician.email || '';
+        document.getElementById('physician-status').value = physician.status || 'active';
+        document.getElementById('physician-experience').value = physician.experience || '';
+    }
+
+    savePhysician() {
+        const firstName = document.getElementById('physician-first-name').value.trim();
+        const lastName = document.getElementById('physician-last-name').value.trim();
+        const specialization = document.getElementById('physician-specialization').value;
+        const clinicId = document.getElementById('physician-clinic').value;
+        const licenseNumber = document.getElementById('physician-license').value.trim();
+        const phone = document.getElementById('physician-phone').value.trim();
+        const email = document.getElementById('physician-email').value.trim();
+        const status = document.getElementById('physician-status').value;
+        const experience = parseInt(document.getElementById('physician-experience').value) || 0;
+
+        if (!firstName || !lastName || !specialization || !clinicId || !licenseNumber || !phone || !email) {
+            this.showMessage('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const physicianData = {
+            id: this.editingPhysician ? this.editingPhysician.id : this.generateUniqueId(),
+            firstName,
+            lastName,
+            name: `${firstName} ${lastName}`,
+            specialization,
+            clinicId,
+            licenseNumber,
+            phone,
+            email,
+            status,
+            experience,
+            createdAt: this.editingPhysician ? this.editingPhysician.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (this.editingPhysician) {
+            const index = this.physicians.findIndex(p => p.id === this.editingPhysician.id);
+            if (index !== -1) {
+                this.physicians[index] = physicianData;
+            }
+        } else {
+            this.physicians.push(physicianData);
+        }
+
+        this.saveData('physicians', this.physicians);
+        this.renderPhysiciansTable();
+        this.populateClinicSelects();
+        this.closeModal('physician-modal');
+        this.showMessage(`Physician ${this.editingPhysician ? 'updated' : 'added'} successfully`, 'success');
+        
+        this.editingPhysician = null;
+    }
+
+    renderPhysiciansTable() {
+        const tbody = document.getElementById('physicians-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = this.physicians.map(physician => {
+            const clinic = this.clinics.find(c => c.id === physician.clinicId);
+            return `
+                <tr>
+                    <td><strong>${physician.name}</strong></td>
+                    <td>${physician.specialization}</td>
+                    <td>${clinic ? clinic.name : 'Unknown'}</td>
+                    <td>${physician.licenseNumber}</td>
+                    <td>${physician.phone}</td>
+                    <td>${physician.email}</td>
+                    <td><span class="status-badge ${physician.status}">${physician.status}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editPhysician('${physician.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="pharmacySystem.deletePhysician('${physician.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    editPhysician(physicianId) {
+        const physician = this.physicians.find(p => p.id === physicianId);
+        if (physician) {
+            this.openPhysicianModal(physician);
+        }
+    }
+
+    deletePhysician(physicianId) {
+        if (confirm('Are you sure you want to delete this physician?')) {
+            this.physicians = this.physicians.filter(p => p.id !== physicianId);
+            this.prescriptions = this.prescriptions.filter(pr => pr.physicianId !== physicianId);
+            this.saveData('physicians', this.physicians);
+            this.saveData('prescriptions', this.prescriptions);
+            this.renderPhysiciansTable();
+            this.renderPrescriptionsTable();
+            this.showMessage('Physician deleted successfully', 'success');
+        }
+    }
+
+    // Prescription Management
+    openPrescriptionModal(prescription = null) {
+        this.editingPrescription = prescription;
+        const modal = document.getElementById('prescription-modal');
+        const title = document.getElementById('prescription-modal-title');
+        
+        if (prescription) {
+            title.textContent = 'Edit Prescription';
+            this.populatePrescriptionForm(prescription);
+        } else {
+            title.textContent = 'New Prescription';
+            document.getElementById('prescription-form').reset();
+            document.getElementById('prescription-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('medication-list').innerHTML = '';
+        }
+        
+        this.populatePhysicianSelects();
+        modal.style.display = 'block';
+        
+        // Add a default medication item if none exist
+        if (document.getElementById('medication-list').children.length === 0) {
+            this.addMedicationItem();
+        }
+    }
+
+    populatePrescriptionForm(prescription) {
+        document.getElementById('prescription-physician').value = prescription.physicianId || '';
+        document.getElementById('prescription-date').value = prescription.date || '';
+        document.getElementById('patient-name').value = prescription.patientName || '';
+        document.getElementById('patient-age').value = prescription.patientAge || '';
+        document.getElementById('patient-phone').value = prescription.patientPhone || '';
+        document.getElementById('prescription-notes').value = prescription.notes || '';
+        
+        // Populate medications
+        const medicationList = document.getElementById('medication-list');
+        medicationList.innerHTML = '';
+        if (prescription.medications && prescription.medications.length > 0) {
+            prescription.medications.forEach(med => this.addMedicationItem(med));
+        }
+    }
+
+    savePrescription() {
+        const physicianId = document.getElementById('prescription-physician').value;
+        const date = document.getElementById('prescription-date').value;
+        const patientName = document.getElementById('patient-name').value.trim();
+        const patientAge = parseInt(document.getElementById('patient-age').value) || null;
+        const patientPhone = document.getElementById('patient-phone').value.trim();
+        const notes = document.getElementById('prescription-notes').value.trim();
+
+        if (!physicianId || !date || !patientName) {
+            this.showMessage('Please fill in all required fields', 'error');
+            return;
+        }
+
+        // Collect medications
+        const medications = [];
+        const medicationItems = document.querySelectorAll('.medication-item');
+        medicationItems.forEach(item => {
+            const nameInput = item.querySelector('.medication-name');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const dosage = item.querySelector('.medication-dosage').value.trim();
+            const frequency = item.querySelector('.medication-frequency').value;
+            const duration = item.querySelector('.medication-duration').value.trim();
+            const instructions = item.querySelector('.medication-instructions').value.trim();
+
+            if (name && dosage && frequency && duration) {
+                // Try to find matching product in inventory for additional info
+                const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+                const matchingProduct = this.products.find(product => 
+                    product.pharmacyId === currentPharmacyId && 
+                    product.name.toLowerCase() === name.toLowerCase()
+                );
+
+                medications.push({
+                    name,
+                    sku: matchingProduct ? matchingProduct.sku : '',
+                    dosage,
+                    frequency,
+                    duration,
+                    instructions,
+                    stock: matchingProduct ? matchingProduct.currentStock : null,
+                    price: matchingProduct ? matchingProduct.price : null
+                });
+            }
+        });
+
+        if (medications.length === 0) {
+            this.showMessage('Please add at least one medication', 'error');
+            return;
+        }
+
+        const physician = this.physicians.find(p => p.id === physicianId);
+        const clinic = physician ? this.clinics.find(c => c.id === physician.clinicId) : null;
+
+        const prescriptionData = {
+            id: this.editingPrescription ? this.editingPrescription.id : this.generateUniqueId(),
+            prescriptionNumber: this.editingPrescription ? this.editingPrescription.prescriptionNumber : `RX${Date.now()}`,
+            physicianId,
+            physicianName: physician ? physician.name : 'Unknown',
+            clinicId: clinic ? clinic.id : null,
+            clinicName: clinic ? clinic.name : 'Unknown',
+            date,
+            patientName,
+            patientAge,
+            patientPhone,
+            medications,
+            notes,
+            status: this.editingPrescription ? this.editingPrescription.status : 'pending',
+            createdAt: this.editingPrescription ? this.editingPrescription.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (this.editingPrescription) {
+            const index = this.prescriptions.findIndex(p => p.id === this.editingPrescription.id);
+            if (index !== -1) {
+                this.prescriptions[index] = prescriptionData;
+            }
+        } else {
+            this.prescriptions.push(prescriptionData);
+        }
+
+        this.saveData('prescriptions', this.prescriptions);
+        this.renderPrescriptionsTable();
+        this.closeModal('prescription-modal');
+        this.showMessage(`Prescription ${this.editingPrescription ? 'updated' : 'created'} successfully`, 'success');
+        
+        this.editingPrescription = null;
+    }
+
+    renderPrescriptionsTable() {
+        const tbody = document.getElementById('prescriptions-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = this.prescriptions.map(prescription => `
+            <tr>
+                <td><strong>${prescription.prescriptionNumber}</strong></td>
+                <td>${prescription.patientName}</td>
+                <td>${prescription.physicianName}</td>
+                <td>${prescription.clinicName}</td>
+                <td>${new Date(prescription.date).toLocaleDateString('en-GB')}</td>
+                <td><span class="status-badge ${prescription.status}">${prescription.status}</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-info" onclick="pharmacySystem.viewPrescription('${prescription.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editPrescription('${prescription.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="pharmacySystem.dispensePrescription('${prescription.id}')" ${prescription.status === 'dispensed' ? 'disabled' : ''}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    viewPrescription(prescriptionId) {
+        const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+        if (!prescription) return;
+
+        const medicationsList = prescription.medications.map(med => `
+            <div class="medication-item">
+                <h5>${med.name} - ${med.dosage}</h5>
+                <p><strong>Frequency:</strong> ${med.frequency}</p>
+                <p><strong>Duration:</strong> ${med.duration}</p>
+                ${med.sku ? `<p><strong>SKU:</strong> ${med.sku}</p>` : ''}
+                ${med.stock !== null ? `<p><strong>Available Stock:</strong> ${med.stock}</p>` : ''}
+                ${med.price !== null ? `<p><strong>Price:</strong> ${this.formatCurrency(med.price)}</p>` : ''}
+                ${med.instructions ? `<p><strong>Instructions:</strong> ${med.instructions}</p>` : ''}
+            </div>
+        `).join('');
+
+        const prescriptionHTML = `
+            <div class="prescription-details">
+                <h3>Prescription Details - ${prescription.prescriptionNumber}</h3>
+                <div class="prescription-info">
+                    <div class="info-row">
+                        <strong>Patient:</strong> ${prescription.patientName}
+                        ${prescription.patientAge ? ` (Age: ${prescription.patientAge})` : ''}
+                    </div>
+                    <div class="info-row">
+                        <strong>Physician:</strong> ${prescription.physicianName}
+                    </div>
+                    <div class="info-row">
+                        <strong>Clinic:</strong> ${prescription.clinicName}
+                    </div>
+                    <div class="info-row">
+                        <strong>Date:</strong> ${new Date(prescription.date).toLocaleDateString('en-GB')}
+                    </div>
+                    <div class="info-row">
+                        <strong>Status:</strong> <span class="status-badge ${prescription.status}">${prescription.status}</span>
+                    </div>
+                    ${prescription.notes ? `<div class="info-row"><strong>Notes:</strong> ${prescription.notes}</div>` : ''}
+                </div>
+                <div class="medications-section">
+                    <h4>Medications</h4>
+                    ${medicationsList}
+                </div>
+            </div>
+        `;
+
+        this.displayReport('Prescription Details', prescriptionHTML);
+    }
+
+    editPrescription(prescriptionId) {
+        const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+        if (prescription) {
+            this.openPrescriptionModal(prescription);
+        }
+    }
+
+    dispensePrescription(prescriptionId) {
+        if (confirm('Mark this prescription as dispensed?')) {
+            const prescription = this.prescriptions.find(p => p.id === prescriptionId);
+            if (prescription) {
+                prescription.status = 'dispensed';
+                prescription.dispensedAt = new Date().toISOString();
+                this.saveData('prescriptions', this.prescriptions);
+                this.renderPrescriptionsTable();
+                this.showMessage('Prescription marked as dispensed', 'success');
+            }
+        }
+    }
+
+    // Helper Methods
+    addMedicationItem(medication = null) {
+        const template = document.getElementById('medication-item-template');
+        const clone = template.cloneNode(true);
+        clone.style.display = 'block';
+        clone.id = '';
+
+        if (medication) {
+            clone.querySelector('.medication-name').value = medication.name || '';
+            clone.querySelector('.medication-dosage').value = medication.dosage || '';
+            clone.querySelector('.medication-frequency').value = medication.frequency || '';
+            clone.querySelector('.medication-duration').value = medication.duration || '';
+            clone.querySelector('.medication-instructions').value = medication.instructions || '';
+        }
+
+        // Add remove functionality
+        clone.querySelector('.remove-medication').addEventListener('click', (e) => {
+            e.target.closest('.medication-item').remove();
+        });
+
+        // Add autocomplete functionality
+        this.setupMedicationAutocomplete(clone.querySelector('.medication-name'));
+
+        document.getElementById('medication-list').appendChild(clone);
+    }
+
+    setupMedicationAutocomplete(inputElement) {
+        if (!inputElement) return;
+
+        let currentSuggestions = [];
+        let selectedIndex = -1;
+        let isSelecting = false;
+
+        // Get inventory products for autocomplete
+        const getInventoryProducts = () => {
+            const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+            return this.products.filter(product => 
+                product.pharmacyId === currentPharmacyId
+            );
+        };
+
+        // Filter products based on input
+        const filterProducts = (query) => {
+            if (!query || query.length < 2) return [];
+            
+            const products = getInventoryProducts();
+            const lowerQuery = query.toLowerCase();
+            
+            return products.filter(product => 
+                product.name.toLowerCase().includes(lowerQuery) ||
+                product.sku.toLowerCase().includes(lowerQuery)
+            ).slice(0, 10); // Limit to 10 suggestions
+        };
+
+        // Create suggestion element
+        const createSuggestionElement = (product) => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'autocomplete-suggestion';
+            if (product.currentStock <= 0) {
+                suggestion.classList.add('no-stock');
+            }
+            
+            suggestion.innerHTML = `
+                <div class="suggestion-main">
+                    <div class="suggestion-name">${product.name}</div>
+                    <div class="suggestion-details">SKU: ${product.sku}</div>
+                </div>
+                <div class="suggestion-stock">${product.currentStock}</div>
+                <div class="suggestion-price">${this.formatCurrency(product.price)}</div>
+            `;
+            
+            suggestion.dataset.sku = product.sku;
+            suggestion.dataset.stock = product.currentStock;
+            suggestion.dataset.price = product.price;
+            suggestion.dataset.name = product.name;
+            
+            return suggestion;
+        };
+
+        // Show suggestions
+        const showSuggestions = (suggestions) => {
+            const container = inputElement.closest('.autocomplete-container');
+            const suggestionsDiv = container.querySelector('.autocomplete-suggestions');
+            
+            suggestionsDiv.innerHTML = '';
+            currentSuggestions = suggestions;
+            selectedIndex = -1;
+            
+            if (suggestions.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            suggestions.forEach(suggestion => {
+                suggestionsDiv.appendChild(createSuggestionElement(suggestion));
+            });
+            
+            suggestionsDiv.style.display = 'block';
+        };
+
+        // Hide suggestions
+        const hideSuggestions = () => {
+            const container = inputElement.closest('.autocomplete-container');
+            const suggestionsDiv = container.querySelector('.autocomplete-suggestions');
+            suggestionsDiv.style.display = 'none';
+            currentSuggestions = [];
+            selectedIndex = -1;
+        };
+
+        // Select suggestion
+        const selectSuggestion = (suggestion) => {
+            if (!suggestion) return;
+            
+            inputElement.value = suggestion.dataset.name;
+            isSelecting = true;
+            
+            // Auto-populate dosage if available from product name
+            const dosageInput = inputElement.closest('.medication-item').querySelector('.medication-dosage');
+            if (dosageInput && !dosageInput.value) {
+                const dosageMatch = suggestion.dataset.name.match(/(\d+\s*mg|ml|g|tablets?|capsules?)/i);
+                if (dosageMatch) {
+                    dosageInput.value = dosageMatch[0];
+                }
+            }
+
+            // Show stock information
+            const stock = suggestion.dataset.stock;
+            const price = suggestion.dataset.price;
+            
+            // Add a small info display below the input
+            let infoDiv = inputElement.parentNode.querySelector('.medication-info');
+            if (!infoDiv) {
+                infoDiv = document.createElement('div');
+                infoDiv.className = 'medication-info';
+                inputElement.parentNode.appendChild(infoDiv);
+            }
+            
+            infoDiv.innerHTML = `Stock: ${stock} | Price: ${this.formatCurrency(price)}`;
+            
+            hideSuggestions();
+            isSelecting = false;
+        };
+
+        // Highlight suggestion
+        const highlightSuggestion = (index) => {
+            const container = inputElement.closest('.autocomplete-container');
+            const suggestions = container.querySelectorAll('.autocomplete-suggestion');
+            
+            suggestions.forEach((suggestion, i) => {
+                suggestion.classList.toggle('highlighted', i === index);
+            });
+        };
+
+        // Event listeners
+        inputElement.addEventListener('input', (e) => {
+            if (isSelecting) return;
+            
+            const query = e.target.value.trim();
+            const suggestions = filterProducts(query);
+            showSuggestions(suggestions);
+        });
+
+        inputElement.addEventListener('keydown', (e) => {
+            const container = inputElement.closest('.autocomplete-container');
+            const suggestionsDiv = container.querySelector('.autocomplete-suggestions');
+            
+            if (suggestionsDiv.style.display === 'none') return;
+            
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, currentSuggestions.length - 1);
+                    highlightSuggestion(selectedIndex);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    highlightSuggestion(selectedIndex);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && currentSuggestions[selectedIndex]) {
+                        selectSuggestion(currentSuggestions[selectedIndex]);
+                    }
+                    break;
+                case 'Escape':
+                    hideSuggestions();
+                    break;
+            }
+        });
+
+        // Click on suggestion
+        inputElement.addEventListener('focus', () => {
+            const query = inputElement.value.trim();
+            if (query.length >= 2) {
+                const suggestions = filterProducts(query);
+                showSuggestions(suggestions);
+            }
+        });
+
+        // Click outside to hide suggestions
+        document.addEventListener('click', (e) => {
+            if (!inputElement.closest('.autocomplete-container').contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+
+        // Click on suggestion
+        inputElement.closest('.autocomplete-container').addEventListener('click', (e) => {
+            if (e.target.closest('.autocomplete-suggestion')) {
+                const suggestion = e.target.closest('.autocomplete-suggestion');
+                selectSuggestion(suggestion);
+            }
+        });
+    }
+
+    populateClinicSelects() {
+        const selects = ['physician-clinic', 'prescription-physician'];
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                const currentValue = select.value;
+                select.innerHTML = selectId === 'prescription-physician' ? 
+                    '<option value="">Select Physician</option>' : 
+                    '<option value="">Select Clinic</option>';
+                
+                if (selectId === 'prescription-physician') {
+                    this.physicians.forEach(physician => {
+                        const clinic = this.clinics.find(c => c.id === physician.clinicId);
+                        const option = document.createElement('option');
+                        option.value = physician.id;
+                        option.textContent = `${physician.name} (${clinic ? clinic.name : 'Unknown'})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    this.clinics.forEach(clinic => {
+                        const option = document.createElement('option');
+                        option.value = clinic.id;
+                        option.textContent = clinic.name;
+                        select.appendChild(option);
+                    });
+                }
+                
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            }
+        });
+    }
+
+    populatePhysicianSelects() {
+        this.populateClinicSelects();
+    }
+
+    // Filter Methods
+    filterClinics() {
+        const searchTerm = document.getElementById('clinic-search').value.toLowerCase();
+        const statusFilter = document.getElementById('clinic-status-filter').value;
+        
+        const filteredClinics = this.clinics.filter(clinic => {
+            const matchesSearch = clinic.name.toLowerCase().includes(searchTerm) ||
+                                clinic.address.toLowerCase().includes(searchTerm) ||
+                                clinic.phone.includes(searchTerm) ||
+                                clinic.email.toLowerCase().includes(searchTerm);
+            const matchesStatus = !statusFilter || clinic.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+
+        this.renderFilteredClinics(filteredClinics);
+    }
+
+    renderFilteredClinics(clinics) {
+        const tbody = document.getElementById('clinics-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = clinics.map(clinic => `
+            <tr>
+                <td><strong>${clinic.name}</strong></td>
+                <td>${clinic.address}</td>
+                <td>${clinic.phone}</td>
+                <td>${clinic.email}</td>
+                <td>${this.physicians.filter(p => p.clinicId === clinic.id).length}</td>
+                <td><span class="status-badge ${clinic.status}">${clinic.status}</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editClinic('${clinic.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="pharmacySystem.deleteClinic('${clinic.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    filterPhysicians() {
+        const searchTerm = document.getElementById('physician-search').value.toLowerCase();
+        const clinicFilter = document.getElementById('physician-clinic-filter').value;
+        
+        const filteredPhysicians = this.physicians.filter(physician => {
+            const matchesSearch = physician.name.toLowerCase().includes(searchTerm) ||
+                                physician.specialization.toLowerCase().includes(searchTerm) ||
+                                physician.licenseNumber.toLowerCase().includes(searchTerm) ||
+                                physician.phone.includes(searchTerm) ||
+                                physician.email.toLowerCase().includes(searchTerm);
+            const matchesClinic = !clinicFilter || physician.clinicId === clinicFilter;
+            return matchesSearch && matchesClinic;
+        });
+
+        this.renderFilteredPhysicians(filteredPhysicians);
+    }
+
+    renderFilteredPhysicians(physicians) {
+        const tbody = document.getElementById('physicians-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = physicians.map(physician => {
+            const clinic = this.clinics.find(c => c.id === physician.clinicId);
+            return `
+                <tr>
+                    <td><strong>${physician.name}</strong></td>
+                    <td>${physician.specialization}</td>
+                    <td>${clinic ? clinic.name : 'Unknown'}</td>
+                    <td>${physician.licenseNumber}</td>
+                    <td>${physician.phone}</td>
+                    <td>${physician.email}</td>
+                    <td><span class="status-badge ${physician.status}">${physician.status}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editPhysician('${physician.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="pharmacySystem.deletePhysician('${physician.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    filterPrescriptions() {
+        const searchTerm = document.getElementById('prescription-search').value.toLowerCase();
+        const statusFilter = document.getElementById('prescription-status-filter').value;
+        const dateFilter = document.getElementById('prescription-date-filter').value;
+        
+        const filteredPrescriptions = this.prescriptions.filter(prescription => {
+            const matchesSearch = prescription.prescriptionNumber.toLowerCase().includes(searchTerm) ||
+                                prescription.patientName.toLowerCase().includes(searchTerm) ||
+                                prescription.physicianName.toLowerCase().includes(searchTerm) ||
+                                prescription.clinicName.toLowerCase().includes(searchTerm);
+            const matchesStatus = !statusFilter || prescription.status === statusFilter;
+            const matchesDate = !dateFilter || prescription.date === dateFilter;
+            return matchesSearch && matchesStatus && matchesDate;
+        });
+
+        this.renderFilteredPrescriptions(filteredPrescriptions);
+    }
+
+    renderFilteredPrescriptions(prescriptions) {
+        const tbody = document.getElementById('prescriptions-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = prescriptions.map(prescription => `
+            <tr>
+                <td><strong>${prescription.prescriptionNumber}</strong></td>
+                <td>${prescription.patientName}</td>
+                <td>${prescription.physicianName}</td>
+                <td>${prescription.clinicName}</td>
+                <td>${new Date(prescription.date).toLocaleDateString('en-GB')}</td>
+                <td><span class="status-badge ${prescription.status}">${prescription.status}</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-info" onclick="pharmacySystem.viewPrescription('${prescription.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.editPrescription('${prescription.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="pharmacySystem.dispensePrescription('${prescription.id}')" ${prescription.status === 'dispensed' ? 'disabled' : ''}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     }
 
     // ==================== CLINICAL DECISION SUPPORT SYSTEM METHODS ====================
@@ -9137,6 +10682,8 @@ Please provide helpful, professional, and accurate clinical guidance.`;
             'staff': ['view-staff', 'manage-staff'],
             'reports': ['view-reports'],
             'attendance': ['view-attendance', 'manage-attendance'],
+            'clinics': ['view-clinics', 'manage-clinics'],
+            'internal-chat': ['view-internal-chat'],
             'admin': ['admin-access']
         };
 
