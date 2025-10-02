@@ -1,4 +1,3 @@
-// Pharmacy Management System - Main JavaScript File
 
 class PharmacyManagementSystem {
     constructor() {
@@ -93,6 +92,13 @@ class PharmacyManagementSystem {
         this.selectedCountProduct = null;
         this.countSearchMethod = 'barcode';
         
+        // Online Orders data
+        this.onlineOrders = this.loadData('onlineOrders') || [];
+        this.currentProcessingOrder = null;
+        
+        // Sync data with e-commerce system
+        this.syncDataWithEcommerce();
+        
         this.init();
     }
 
@@ -104,6 +110,21 @@ class PharmacyManagementSystem {
         this.loadOpenAIKey();
         this.checkClockInStatus();
         this.initializeNotifications();
+        this.setupOnlineStoreIntegration();
+    }
+
+    syncDataWithEcommerce() {
+        // Sync products with e-commerce system using prefixed keys
+        localStorage.setItem('pharmacy_products', JSON.stringify(this.products));
+        localStorage.setItem('pharmacy_pharmacies', JSON.stringify(this.pharmacies));
+        
+        // Set up periodic sync every 30 seconds
+        setInterval(() => {
+            localStorage.setItem('pharmacy_products', JSON.stringify(this.products));
+            localStorage.setItem('pharmacy_pharmacies', JSON.stringify(this.pharmacies));
+        }, 30000);
+        
+        console.log('E-commerce data sync initialized');
     }
 
     setupEventListeners() {
@@ -3388,6 +3409,94 @@ class PharmacyManagementSystem {
         const wsSummary = XLSX.utils.json_to_sheet(summaryData);
         wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+        // Wasfaty Integration event listeners
+        document.getElementById('wasfaty-sync-btn').addEventListener('click', () => {
+            this.syncWithWasfaty();
+        });
+
+        document.getElementById('wasfaty-status-btn').addEventListener('click', () => {
+            this.checkWasfatyStatus();
+        });
+
+        document.getElementById('test-connection-btn').addEventListener('click', () => {
+            this.testWasfatyConnection();
+        });
+
+        document.getElementById('save-config-btn').addEventListener('click', () => {
+            this.saveWasfatyConfig();
+        });
+
+        document.getElementById('refresh-prescriptions-btn').addEventListener('click', () => {
+            this.refreshWasfatyPrescriptions();
+        });
+
+        document.getElementById('clear-logs-btn').addEventListener('click', () => {
+            this.clearWasfatyLogs();
+        });
+
+        document.getElementById('export-logs-btn').addEventListener('click', () => {
+            this.exportWasfatyLogs();
+        });
+
+        // Online Orders event listeners
+        const refreshOrdersBtn = document.getElementById('refresh-orders-btn');
+        if (refreshOrdersBtn) {
+            refreshOrdersBtn.addEventListener('click', () => {
+                console.log('Refresh orders button clicked');
+                this.refreshOnlineOrders();
+            });
+            console.log('Refresh orders button event listener added successfully');
+        } else {
+            console.error('Refresh orders button not found in DOM');
+        }
+
+        const exportOrdersBtn = document.getElementById('export-orders-btn');
+        if (exportOrdersBtn) {
+            exportOrdersBtn.addEventListener('click', () => {
+                console.log('Export orders button clicked');
+                this.exportOnlineOrders();
+            });
+            console.log('Export orders button event listener added successfully');
+        } else {
+            console.error('Export orders button not found in DOM');
+        }
+
+        document.getElementById('order-search').addEventListener('input', (e) => {
+            this.searchOnlineOrders(e.target.value);
+        });
+
+        document.getElementById('order-status-filter').addEventListener('change', () => {
+            this.filterOnlineOrders();
+        });
+
+        document.getElementById('order-priority-filter').addEventListener('change', () => {
+            this.filterOnlineOrders();
+        });
+
+        document.getElementById('delivery-method-filter').addEventListener('change', () => {
+            this.filterOnlineOrders();
+        });
+
+        document.getElementById('apply-date-filter').addEventListener('click', () => {
+            this.applyDateFilter();
+        });
+
+        document.getElementById('close-processing-panel').addEventListener('click', () => {
+            this.closeOrderProcessingPanel();
+        });
+
+        document.getElementById('update-order-status').addEventListener('click', () => {
+            this.updateOrderStatus();
+        });
+
+        document.getElementById('print-order-label').addEventListener('click', () => {
+            this.printOrderLabel();
+        });
+
+        document.getElementById('send-notification').addEventListener('click', () => {
+            this.sendCustomerNotification();
+        });
     }
 
     // Utility functions
@@ -15006,6 +15115,760 @@ Please provide helpful, professional, and accurate clinical guidance.`;
             activeCounts: this.activeCountSession ? 1 : 0,
             countHistory: this.inventoryCounts.length
         };
+    }
+
+    // ==================== WASFATY INTEGRATION METHODS ====================
+
+    syncWithWasfaty() {
+        this.showMessage('Syncing with Wasfaty system...', 'info');
+        
+        // Simulate API call
+        setTimeout(() => {
+            this.updateWasfatyStatus('connected');
+            this.addWasfatyLog('info', 'Synchronization completed successfully');
+            this.showMessage('Successfully synced with Wasfaty!', 'success');
+            this.loadWasfatyData();
+        }, 2000);
+    }
+
+    checkWasfatyStatus() {
+        this.showMessage('Checking Wasfaty connection status...', 'info');
+        
+        // Simulate API health check
+        setTimeout(() => {
+            const isConnected = Math.random() > 0.3; // 70% chance of success
+            this.updateWasfatyStatus(isConnected ? 'connected' : 'disconnected');
+            this.addWasfatyLog(isConnected ? 'info' : 'error', 
+                isConnected ? 'Connection test successful' : 'Connection test failed');
+            this.showMessage(isConnected ? 'Wasfaty is connected' : 'Wasfaty connection failed', 
+                isConnected ? 'success' : 'error');
+        }, 1500);
+    }
+
+    testWasfatyConnection() {
+        const clientId = document.getElementById('wasfaty-client-id').value;
+        const clientSecret = document.getElementById('wasfaty-client-secret').value;
+        const pharmacyId = document.getElementById('wasfaty-pharmacy-id').value;
+
+        if (!clientId || !clientSecret || !pharmacyId) {
+            this.showMessage('Please fill in all configuration fields', 'error');
+            return;
+        }
+
+        this.showMessage('Testing connection to Wasfaty...', 'info');
+        
+        // Simulate connection test
+        setTimeout(() => {
+            const success = Math.random() > 0.2; // 80% chance of success
+            if (success) {
+                this.updateWasfatyStatus('connected');
+                this.addWasfatyLog('info', 'Connection test successful with provided credentials');
+                this.showMessage('Connection test successful!', 'success');
+            } else {
+                this.updateWasfatyStatus('disconnected');
+                this.addWasfatyLog('error', 'Connection test failed - Invalid credentials or network error');
+                this.showMessage('Connection test failed. Please check your credentials.', 'error');
+            }
+        }, 2000);
+    }
+
+    saveWasfatyConfig() {
+        const config = {
+            apiUrl: document.getElementById('wasfaty-api-url').value,
+            clientId: document.getElementById('wasfaty-client-id').value,
+            clientSecret: document.getElementById('wasfaty-client-secret').value,
+            pharmacyId: document.getElementById('wasfaty-pharmacy-id').value,
+            lastUpdated: new Date().toISOString()
+        };
+
+        // Save to localStorage
+        this.saveData('wasfatyConfig', config);
+        this.addWasfatyLog('info', 'Configuration settings saved successfully');
+        this.showMessage('Wasfaty configuration saved successfully!', 'success');
+    }
+
+    refreshWasfatyPrescriptions() {
+        this.showMessage('Refreshing prescriptions from Wasfaty...', 'info');
+        
+        // Simulate fetching prescriptions
+        setTimeout(() => {
+            const samplePrescriptions = [
+                {
+                    id: 'WRX001',
+                    patientName: 'Ahmed Al-Rashid',
+                    physician: 'Dr. Sarah Johnson',
+                    date: new Date().toISOString(),
+                    status: 'pending',
+                    items: 3
+                },
+                {
+                    id: 'WRX002',
+                    patientName: 'Fatima Al-Zahra',
+                    physician: 'Dr. Mohammed Ali',
+                    date: new Date(Date.now() - 86400000).toISOString(),
+                    status: 'processing',
+                    items: 2
+                }
+            ];
+
+            this.loadPrescriptionsTable(samplePrescriptions);
+            this.updateWasfatyStats(samplePrescriptions);
+            this.addWasfatyLog('info', `Refreshed ${samplePrescriptions.length} prescriptions from Wasfaty`);
+            this.showMessage('Prescriptions refreshed successfully!', 'success');
+        }, 1500);
+    }
+
+    clearWasfatyLogs() {
+        if (confirm('Are you sure you want to clear all Wasfaty logs?')) {
+            document.getElementById('wasfaty-logs-content').innerHTML = 
+                '<div class="log-entry info"><span class="log-time">' + 
+                new Date().toLocaleString() + '</span><span class="log-level">INFO</span>' +
+                '<span class="log-message">Logs cleared by user</span></div>';
+            this.showMessage('Wasfaty logs cleared', 'info');
+        }
+    }
+
+    exportWasfatyLogs() {
+        const logs = document.getElementById('wasfaty-logs-content').innerText;
+        const blob = new Blob([logs], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wasfaty_logs_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.showMessage('Wasfaty logs exported successfully!', 'success');
+    }
+
+    updateWasfatyStatus(status) {
+        const statusElement = document.getElementById('wasfaty-connection-status');
+        statusElement.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+        statusElement.className = status === 'connected' ? 'status-connected' : 'status-disconnected';
+    }
+
+    updateWasfatyStats(prescriptions = []) {
+        const pending = prescriptions.filter(p => p.status === 'pending').length;
+        const processedToday = prescriptions.filter(p => {
+            const today = new Date().toDateString();
+            return new Date(p.date).toDateString() === today && p.status === 'completed';
+        }).length;
+
+        document.getElementById('pending-prescriptions').textContent = pending;
+        document.getElementById('processed-today').textContent = processedToday;
+        document.getElementById('sync-errors').textContent = '0'; // Placeholder
+    }
+
+    loadPrescriptionsTable(prescriptions) {
+        const tbody = document.getElementById('prescriptions-table-body');
+        
+        if (prescriptions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="no-data">No prescriptions found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = prescriptions.map(prescription => `
+            <tr>
+                <td>${prescription.id}</td>
+                <td>${prescription.patientName}</td>
+                <td>${prescription.physician}</td>
+                <td>${new Date(prescription.date).toLocaleDateString()}</td>
+                <td><span class="status-badge ${prescription.status}">${this.capitalizeFirst(prescription.status)}</span></td>
+                <td>${prescription.items}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="pharmacySystem.processPrescription('${prescription.id}')">
+                        Process
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    processPrescription(prescriptionId) {
+        this.showMessage(`Processing prescription ${prescriptionId}...`, 'info');
+        this.addWasfatyLog('info', `Started processing prescription ${prescriptionId}`);
+        
+        // Simulate prescription processing
+        setTimeout(() => {
+            this.addWasfatyLog('info', `Successfully processed prescription ${prescriptionId}`);
+            this.showMessage(`Prescription ${prescriptionId} processed successfully!`, 'success');
+            this.refreshWasfatyPrescriptions();
+        }, 2000);
+    }
+
+    addWasfatyLog(level, message) {
+        const logsContainer = document.getElementById('wasfaty-logs-content');
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${level}`;
+        logEntry.innerHTML = `
+            <span class="log-time">${new Date().toLocaleString()}</span>
+            <span class="log-level">${level.toUpperCase()}</span>
+            <span class="log-message">${message}</span>
+        `;
+        logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+
+        // Keep only last 100 log entries
+        const entries = logsContainer.children;
+        if (entries.length > 100) {
+            logsContainer.removeChild(entries[entries.length - 1]);
+        }
+    }
+
+    loadWasfatyData() {
+        // Load saved configuration
+        const config = this.loadData('wasfatyConfig');
+        if (config) {
+            document.getElementById('wasfaty-api-url').value = config.apiUrl || 'https://api.wasfaty.sa';
+            document.getElementById('wasfaty-client-id').value = config.clientId || '';
+            document.getElementById('wasfaty-client-secret').value = config.clientSecret || '';
+            document.getElementById('wasfaty-pharmacy-id').value = config.pharmacyId || '';
+        }
+
+        // Initialize with sample data
+        this.refreshWasfatyPrescriptions();
+    }
+
+    // ==================== ONLINE ORDERS METHODS ====================
+
+    refreshOnlineOrders() {
+        console.log('refreshOnlineOrders method called');
+        this.showMessage('Refreshing online orders...', 'info');
+        
+        setTimeout(() => {
+            console.log('Starting order refresh process...');
+            
+            // Load real orders from localStorage (from e-commerce system)
+            const storedOrders = this.loadData('onlineOrders') || [];
+            console.log('Stored orders found:', storedOrders.length);
+            
+            // Check for new orders from e-commerce system
+            this.checkForNewOnlineOrders();
+            
+            // Reload orders after checking for new ones
+            this.onlineOrders = this.loadData('onlineOrders') || [];
+            console.log('Total orders after refresh:', this.onlineOrders.length);
+            
+            // If no real orders exist, load sample data for demonstration
+            if (this.onlineOrders.length === 0) {
+                console.log('No orders found, loading sample data');
+                this.loadSampleOnlineOrders();
+            } else {
+                console.log('Loading real orders to table');
+                this.loadOnlineOrdersTable(this.onlineOrders);
+                this.updateOrderStats(this.onlineOrders);
+            }
+            
+            this.showMessage(`Refreshed ${this.onlineOrders.length} online orders successfully!`, 'success');
+            console.log('Order refresh completed');
+        }, 1000);
+    }
+
+    loadSampleOnlineOrders() {
+        const sampleOrders = [
+            {
+                id: 'ORD001',
+                orderNumber: 'WEB-2024-001',
+                customerName: 'Ahmed Al-Rashid',
+                customerPhone: '+966501234567',
+                customerEmail: 'ahmed.rashid@email.com',
+                customerAddress: '123 King Fahd Road, Riyadh 12345',
+                deliveryAddress: '123 King Fahd Road, Riyadh 12345',
+                items: [
+                    { name: 'Paracetamol 500mg', quantity: 2, price: 15.00, sku: 'PAR500', total: 30.00 },
+                    { name: 'Vitamin D3 1000IU', quantity: 1, price: 45.00, sku: 'VIT1000', total: 45.00 }
+                ],
+                totalAmount: 75.00,
+                status: 'pending',
+                priority: 'normal',
+                deliveryMethod: 'home-delivery',
+                deliveryTime: '2-4 PM',
+                deliveryNotes: 'Please call before delivery',
+                orderDate: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+                source: 'sample-data'
+            },
+            {
+                id: 'ORD002',
+                orderNumber: 'WEB-2024-002',
+                customerName: 'Fatima Al-Zahra',
+                customerPhone: '+966507654321',
+                customerEmail: 'fatima.zahra@email.com',
+                customerAddress: '456 Olaya Street, Riyadh 11564',
+                deliveryAddress: '456 Olaya Street, Riyadh 11564',
+                items: [
+                    { name: 'Ibuprofen 400mg', quantity: 1, price: 25.00, sku: 'IBU400', total: 25.00 }
+                ],
+                totalAmount: 25.00,
+                status: 'preparing',
+                priority: 'high',
+                deliveryMethod: 'express',
+                deliveryTime: 'ASAP',
+                deliveryNotes: 'Urgent medication needed',
+                orderDate: new Date(Date.now() - 3600000).toISOString(),
+                lastUpdated: new Date().toISOString(),
+                source: 'sample-data'
+            }
+        ];
+
+        this.onlineOrders = sampleOrders;
+        this.saveData('onlineOrders', this.onlineOrders);
+        this.loadOnlineOrdersTable(sampleOrders);
+        this.updateOrderStats(sampleOrders);
+    }
+
+    loadOnlineOrdersTable(orders) {
+        const tbody = document.getElementById('orders-table-body');
+        
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="no-data">No orders found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => `
+            <tr>
+                <td><strong>${order.orderNumber}</strong></td>
+                <td>
+                    <div class="customer-info">
+                        <div>${order.customerName}</div>
+                        <small>${order.customerPhone}</small>
+                    </div>
+                </td>
+                <td>${order.items.length} item${order.items.length !== 1 ? 's' : ''}</td>
+                <td>${this.formatCurrency(order.totalAmount)}</td>
+                <td><span class="status-badge ${order.status}">${this.capitalizeFirst(order.status)}</span></td>
+                <td><span class="priority-badge ${order.priority}">${this.capitalizeFirst(order.priority)}</span></td>
+                <td>${this.formatDeliveryMethod(order.deliveryMethod)}</td>
+                <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="pharmacySystem.processOrder('${order.id}')">
+                        Process
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    updateOrderStats(orders) {
+        const pending = orders.filter(o => o.status === 'pending').length;
+        const preparing = orders.filter(o => o.status === 'preparing').length;
+        const ready = orders.filter(o => o.status === 'ready').length;
+        const completedToday = orders.filter(o => {
+            const today = new Date().toDateString();
+            return new Date(o.orderDate).toDateString() === today && 
+                   (o.status === 'delivered' || o.status === 'completed');
+        }).length;
+
+        document.getElementById('pending-orders').textContent = pending;
+        document.getElementById('preparing-orders').textContent = preparing;
+        document.getElementById('ready-orders').textContent = ready;
+        document.getElementById('completed-orders').textContent = completedToday;
+    }
+
+    processOrder(orderId) {
+        const order = this.onlineOrders.find(o => o.id === orderId);
+        if (!order) return;
+        this.currentProcessingOrder = order;
+        this.showOrderProcessingPanel(order);
+    }
+
+    formatDeliveryMethod(method) {
+        const methods = {
+            'home-delivery': 'Home Delivery',
+            'pickup': 'Store Pickup',
+            'express': 'Express Delivery'
+        };
+        return methods[method] || method;
+    }
+
+    showOrderProcessingPanel(order) {
+        document.getElementById('processing-order-number').textContent = order.orderNumber;
+        document.getElementById('customer-name').textContent = order.customerName;
+        document.getElementById('customer-phone').textContent = order.customerPhone;
+        document.getElementById('customer-email').textContent = order.customerEmail;
+        document.getElementById('customer-address').textContent = order.customerAddress;
+        document.getElementById('delivery-method').textContent = this.formatDeliveryMethod(order.deliveryMethod);
+        document.getElementById('delivery-time').textContent = order.deliveryTime;
+        document.getElementById('delivery-notes').textContent = order.deliveryNotes || 'None';
+        document.getElementById('order-status-update').value = order.status;
+
+        const itemsList = document.getElementById('processing-items-list');
+        itemsList.innerHTML = order.items.map(item => `
+            <div class="order-item">
+                <div class="item-details">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-sku">SKU: ${item.sku}</div>
+                </div>
+                <div class="item-quantity">Qty: ${item.quantity}</div>
+                <div class="item-price">${this.formatCurrency(item.price)}</div>
+                <div class="item-total">${this.formatCurrency(item.price * item.quantity)}</div>
+            </div>
+        `).join('');
+
+        document.getElementById('order-processing-panel').style.display = 'block';
+        document.getElementById('order-processing-panel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    closeOrderProcessingPanel() {
+        document.getElementById('order-processing-panel').style.display = 'none';
+        this.currentProcessingOrder = null;
+    }
+
+    updateOrderStatus() {
+        if (!this.currentProcessingOrder) return;
+
+        const newStatus = document.getElementById('order-status-update').value;
+        const notes = document.getElementById('processing-notes-input').value;
+        const oldStatus = this.currentProcessingOrder.status;
+
+        this.currentProcessingOrder.status = newStatus;
+        this.currentProcessingOrder.lastUpdated = new Date().toISOString();
+        if (notes) {
+            this.currentProcessingOrder.processingNotes = notes;
+        }
+
+        // If order is being completed/delivered, deduct from inventory
+        if ((newStatus === 'delivered' || newStatus === 'completed') && 
+            (oldStatus !== 'delivered' && oldStatus !== 'completed')) {
+            this.processOrderInventoryDeduction(this.currentProcessingOrder);
+        }
+
+        // If order is being cancelled, restore inventory
+        if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+            this.restoreOrderInventory(this.currentProcessingOrder);
+        }
+
+        this.saveData('onlineOrders', this.onlineOrders);
+        this.loadOnlineOrdersTable(this.onlineOrders);
+        this.updateOrderStats(this.onlineOrders);
+
+        this.showMessage(`Order ${this.currentProcessingOrder.orderNumber} status updated to ${newStatus}`, 'success');
+        
+        if (newStatus === 'delivered' || newStatus === 'cancelled') {
+            this.closeOrderProcessingPanel();
+        }
+    }
+
+    printOrderLabel() {
+        if (!this.currentProcessingOrder) return;
+
+        const order = this.currentProcessingOrder;
+        const printContent = `
+            <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Delivery Label</h2>
+                <div style="border: 2px solid #000; padding: 15px; margin: 10px 0;">
+                    <h3>Order: ${order.orderNumber}</h3>
+                    <p><strong>Customer:</strong> ${order.customerName}</p>
+                    <p><strong>Phone:</strong> ${order.customerPhone}</p>
+                    <p><strong>Address:</strong> ${order.customerAddress}</p>
+                    <p><strong>Total:</strong> ${this.formatCurrency(order.totalAmount)}</p>
+                </div>
+            </div>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
+        
+        this.showMessage('Order label sent to printer', 'success');
+    }
+
+    sendCustomerNotification() {
+        if (!this.currentProcessingOrder) return;
+
+        const order = this.currentProcessingOrder;
+        this.showMessage('Sending notification to customer...', 'info');
+        
+        setTimeout(() => {
+            this.showMessage(`Notification sent to ${order.customerName}`, 'success');
+        }, 1000);
+    }
+
+    processOrderInventoryDeduction(order) {
+        if (!order || !order.items) return;
+
+        let inventoryUpdated = false;
+        const inventoryLog = [];
+
+        order.items.forEach(orderItem => {
+            // Find the product in pharmacy inventory
+            const productIndex = this.products.findIndex(product => 
+                product.id === orderItem.id || 
+                product.sku === orderItem.sku ||
+                product.name === orderItem.name
+            );
+
+            if (productIndex !== -1) {
+                const product = this.products[productIndex];
+                const requestedQuantity = orderItem.quantity;
+
+                if (product.currentStock >= requestedQuantity) {
+                    // Deduct from inventory
+                    this.products[productIndex].currentStock -= requestedQuantity;
+                    inventoryUpdated = true;
+
+                    inventoryLog.push({
+                        productName: product.name,
+                        sku: product.sku,
+                        deducted: requestedQuantity,
+                        remainingStock: this.products[productIndex].currentStock
+                    });
+
+                    // Check if stock is below minimum
+                    if (this.products[productIndex].currentStock <= product.minStock) {
+                        this.showMessage(`Warning: ${product.name} is now below minimum stock level`, 'warning');
+                    }
+                } else {
+                    // Insufficient stock
+                    inventoryLog.push({
+                        productName: product.name,
+                        sku: product.sku,
+                        requested: requestedQuantity,
+                        available: product.currentStock,
+                        error: 'Insufficient stock'
+                    });
+                    
+                    this.showMessage(`Warning: Insufficient stock for ${product.name}. Available: ${product.currentStock}, Requested: ${requestedQuantity}`, 'warning');
+                }
+            } else {
+                inventoryLog.push({
+                    productName: orderItem.name,
+                    sku: orderItem.sku,
+                    error: 'Product not found in inventory'
+                });
+            }
+        });
+
+        if (inventoryUpdated) {
+            // Save updated inventory
+            this.saveData('products', this.products);
+            
+            // Update displays if on inventory page
+            if (this.currentSection === 'inventory') {
+                this.loadInventoryTable();
+            }
+
+            // Log the inventory changes
+            console.log('Inventory updated for order:', order.orderNumber, inventoryLog);
+            
+            this.showMessage(`Inventory updated for order ${order.orderNumber}`, 'success');
+        }
+
+        // Store inventory log in order for reference
+        order.inventoryLog = inventoryLog;
+        order.inventoryProcessed = true;
+    }
+
+    restoreOrderInventory(order) {
+        if (!order || !order.items || !order.inventoryProcessed) return;
+
+        let inventoryRestored = false;
+
+        order.items.forEach(orderItem => {
+            // Find the product in pharmacy inventory
+            const productIndex = this.products.findIndex(product => 
+                product.id === orderItem.id || 
+                product.sku === orderItem.sku ||
+                product.name === orderItem.name
+            );
+
+            if (productIndex !== -1) {
+                // Restore inventory
+                this.products[productIndex].currentStock += orderItem.quantity;
+                inventoryRestored = true;
+            }
+        });
+
+        if (inventoryRestored) {
+            // Save updated inventory
+            this.saveData('products', this.products);
+            
+            // Update displays if on inventory page
+            if (this.currentSection === 'inventory') {
+                this.loadInventoryTable();
+            }
+
+            this.showMessage(`Inventory restored for cancelled order ${order.orderNumber}`, 'success');
+        }
+
+        // Mark as inventory restored
+        order.inventoryProcessed = false;
+        order.inventoryRestored = true;
+    }
+
+    searchOnlineOrders(query) {
+        if (!this.onlineOrders) return;
+
+        const filteredOrders = this.onlineOrders.filter(order => 
+            order.orderNumber.toLowerCase().includes(query.toLowerCase()) ||
+            order.customerName.toLowerCase().includes(query.toLowerCase()) ||
+            order.customerPhone.includes(query)
+        );
+
+        this.loadOnlineOrdersTable(filteredOrders);
+    }
+
+    filterOnlineOrders() {
+        if (!this.onlineOrders) return;
+
+        const statusFilter = document.getElementById('order-status-filter').value;
+        const priorityFilter = document.getElementById('order-priority-filter').value;
+        const deliveryFilter = document.getElementById('delivery-method-filter').value;
+
+        let filteredOrders = [...this.onlineOrders];
+
+        if (statusFilter) {
+            filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+        }
+
+        if (priorityFilter) {
+            filteredOrders = filteredOrders.filter(order => order.priority === priorityFilter);
+        }
+
+        if (deliveryFilter) {
+            filteredOrders = filteredOrders.filter(order => order.deliveryMethod === deliveryFilter);
+        }
+
+        this.loadOnlineOrdersTable(filteredOrders);
+    }
+
+    applyDateFilter() {
+        if (!this.onlineOrders) return;
+
+        const fromDate = document.getElementById('order-date-from').value;
+        const toDate = document.getElementById('order-date-to').value;
+
+        let filteredOrders = [...this.onlineOrders];
+
+        if (fromDate) {
+            filteredOrders = filteredOrders.filter(order => 
+                new Date(order.orderDate) >= new Date(fromDate)
+            );
+        }
+
+        if (toDate) {
+            filteredOrders = filteredOrders.filter(order => 
+                new Date(order.orderDate) <= new Date(toDate + 'T23:59:59')
+            );
+        }
+
+        this.loadOnlineOrdersTable(filteredOrders);
+        this.showMessage(`Filtered orders by date range`, 'info');
+    }
+
+    exportOnlineOrders() {
+        if (!this.onlineOrders || this.onlineOrders.length === 0) {
+            this.showMessage('No orders to export', 'error');
+            return;
+        }
+
+        const exportData = this.onlineOrders.map(order => ({
+            'Order Number': order.orderNumber,
+            'Customer Name': order.customerName,
+            'Customer Phone': order.customerPhone,
+            'Total Amount': order.totalAmount,
+            'Status': order.status,
+            'Priority': order.priority,
+            'Delivery Method': order.deliveryMethod,
+            'Order Date': new Date(order.orderDate).toLocaleDateString()
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Online Orders');
+        
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `Online_Orders_${timestamp}.xlsx`;
+        
+        XLSX.writeFile(wb, filename);
+        this.showMessage('Online orders exported successfully!', 'success');
+    }
+
+    viewOrderDetails(orderId) {
+        this.processOrder(orderId);
+    }
+
+    setupOnlineStoreIntegration() {
+        // Listen for new orders from the online store
+        window.addEventListener('newOnlineOrder', (event) => {
+            const newOrder = event.detail;
+            this.handleNewOnlineOrder(newOrder);
+        });
+
+        // Check for new orders every 30 seconds
+        setInterval(() => {
+            this.checkForNewOnlineOrders();
+        }, 30000);
+    }
+
+    handleNewOnlineOrder(orderData) {
+        // Add new order to the list
+        this.onlineOrders.unshift(orderData);
+        this.saveData('onlineOrders', this.onlineOrders);
+        
+        // Update the display if on online orders page
+        if (document.getElementById('online-orders').classList.contains('active')) {
+            this.loadOnlineOrdersTable(this.onlineOrders);
+            this.updateOrderStats(this.onlineOrders);
+        }
+        
+        // Show notification
+        this.addNotification({
+            type: 'order',
+            title: 'New Online Order',
+            message: `Order ${orderData.orderNumber} received from ${orderData.customerName}`,
+            timestamp: new Date().toISOString(),
+            read: false
+        });
+        
+        this.showMessage(`New online order received: ${orderData.orderNumber}`, 'info');
+    }
+
+    checkForNewOnlineOrders() {
+        // Check both regular and e-commerce localStorage keys for new orders
+        const regularOrders = this.loadData('onlineOrders') || [];
+        const ecommerceOrders = JSON.parse(localStorage.getItem('pharmacy_onlineOrders') || '[]');
+        
+        // Combine all orders from both sources
+        const allStoredOrders = [...regularOrders, ...ecommerceOrders];
+        const currentOrderIds = this.onlineOrders.map(order => order.id);
+        
+        const newOrders = allStoredOrders.filter(order => 
+            !currentOrderIds.includes(order.id) && 
+            new Date(order.orderDate || order.createdAt) > new Date(Date.now() - 86400000) // Last 24 hours
+        );
+
+        if (newOrders.length > 0) {
+            console.log(`Found ${newOrders.length} new orders`);
+            
+            newOrders.forEach(order => {
+                if (!currentOrderIds.includes(order.id)) {
+                    // Ensure order has all required fields
+                    const normalizedOrder = {
+                        ...order,
+                        lastUpdated: order.lastUpdated || order.orderDate || new Date().toISOString(),
+                        deliveryAddress: order.deliveryAddress || order.customerAddress,
+                        source: order.source || 'online-store'
+                    };
+                    
+                    this.onlineOrders.unshift(normalizedOrder);
+                }
+            });
+            
+            // Save updated orders to both keys for consistency
+            this.saveData('onlineOrders', this.onlineOrders);
+            localStorage.setItem('pharmacy_onlineOrders', JSON.stringify(this.onlineOrders));
+            
+            // Update display if on online orders page
+            if (document.getElementById('online-orders') && 
+                document.getElementById('online-orders').classList.contains('active')) {
+                this.loadOnlineOrdersTable(this.onlineOrders);
+                this.updateOrderStats(this.onlineOrders);
+            }
+            
+            console.log(`Added ${newOrders.length} new orders to system`);
+        }
     }
 }
 

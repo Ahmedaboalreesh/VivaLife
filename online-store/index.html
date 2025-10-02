@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VivaLife Online Pharmacy - Order Medications Online</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-pills"></i>
+                    <h1>VivaLife Online Pharmacy</h1>
+                </div>
+                <nav class="nav-menu">
+                    <a href="#home" class="nav-link active">Home</a>
+                    <a href="#products" class="nav-link">Products</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                </nav>
+                <div class="header-actions">
+                    <button id="search-btn" class="icon-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="cart-btn" class="icon-btn">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span id="cart-count" class="cart-count">0</span>
+                    </button>
+                    <button id="account-btn" class="btn btn-primary">
+                        <i class="fas fa-user"></i> Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Your Health, Our Priority</h1>
+                    <p>Order your medications online and get them delivered to your doorstep. Fast, reliable, and secure pharmacy services.</p>
+                    <div class="hero-features">
+                        <div class="feature">
+                            <i class="fas fa-truck"></i>
+                            <span>Free Delivery</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-clock"></i>
+                            <span>24/7 Service</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Licensed Pharmacy</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-large" onclick="scrollToProducts()">
+                        <i class="fas fa-shopping-bag"></i> Shop Now
+                    </button>
+                </div>
+                <div class="hero-image">
+                    <div class="pharmacy-illustration">
+                        <i class="fas fa-prescription-bottle-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Bar -->
+    <section class="search-section">
+        <div class="container">
+            <div class="search-bar">
+                <div class="search-input-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="product-search" placeholder="Search for medications, vitamins, health products...">
+                    <button id="search-products-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="search-filters">
+                    <select id="category-filter">
+                        <option value="">All Categories</option>
+                        <option value="medicines">Medicines</option>
+                        <option value="vitamins">Vitamins & Supplements</option>
+                        <option value="cosmetics">Cosmetics</option>
+                        <option value="baby-care">Baby Care</option>
+                        <option value="personal-care">Personal Care</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="products-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Featured Products</h2>
+                <p>Browse our wide selection of quality medications and health products</p>
+            </div>
+            
+            <div class="products-grid" id="products-grid">
+                <!-- Products will be loaded here -->
+            </div>
+
+            <div class="load-more-container">
+                <button id="load-more-btn" class="btn btn-outline">Load More Products</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Our Services</h2>
+                <p>Comprehensive healthcare solutions for you and your family</p>
+            </div>
+            
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-prescription"></i>
+                    </div>
+                    <h3>Prescription Filling</h3>
+                    <p>Upload your prescription and we'll prepare your medications with care and accuracy.</p>
+                </div>
+                
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-truck-medical"></i>
+                    </div>
+                    <h3>Home Delivery</h3>
+                    <p>Fast and secure delivery to your doorstep. Same-day delivery available in selected areas.</p>
+                </div>
+                
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <h3>Pharmacist Consultation</h3>
+                    <p>Get expert advice from our licensed pharmacists via phone or video call.</p>
+                </div>
+                
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Mobile App</h3>
+                    <p>Download our mobile app for easy ordering and prescription management on the go.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Shopping Cart Sidebar -->
+    <div id="cart-sidebar" class="cart-sidebar">
+        <div class="cart-header">
+            <h3>Shopping Cart</h3>
+            <button id="close-cart" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="cart-content">
+            <div id="cart-items" class="cart-items">
+                <!-- Cart items will be displayed here -->
+            </div>
+            
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="cart-subtotal">ر.س 0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery:</span>
+                    <span id="delivery-fee">Free</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span id="cart-total">ر.س 0.00</span>
+                </div>
+            </div>
+            
+            <div class="cart-actions">
+                <button id="clear-cart" class="btn btn-outline">Clear Cart</button>
+                <button id="checkout-btn" class="btn btn-primary">Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Checkout</h3>
+                <button class="close-btn" onclick="closeCheckoutModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="checkout-form">
+                    <div class="form-section">
+                        <h4>Customer Information</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="customer-name">Full Name *</label>
+                                <input type="text" id="customer-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customer-phone">Phone Number *</label>
+                                <input type="tel" id="customer-phone" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customer-email">Email Address</label>
+                                <input type="email" id="customer-email">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Delivery Information</h4>
+                        <div class="form-group">
+                            <label for="delivery-method">Delivery Method *</label>
+                            <select id="delivery-method" required>
+                                <option value="">Select Delivery Method</option>
+                                <option value="home-delivery">Home Delivery (Free)</option>
+                                <option value="express">Express Delivery (+ر.س 15)</option>
+                                <option value="pickup">Store Pickup (Free)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="address-section" class="form-group" style="display: none;">
+                            <label for="delivery-address">Delivery Address *</label>
+                            <textarea id="delivery-address" rows="3" placeholder="Enter your full address including building number, street, district, and city"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="delivery-time">Preferred Delivery Time</label>
+                            <select id="delivery-time">
+                                <option value="">Any Time</option>
+                                <option value="morning">Morning (9 AM - 12 PM)</option>
+                                <option value="afternoon">Afternoon (12 PM - 4 PM)</option>
+                                <option value="evening">Evening (4 PM - 8 PM)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="delivery-notes">Special Instructions</label>
+                            <textarea id="delivery-notes" rows="2" placeholder="Any special delivery instructions..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Order Summary</h4>
+                        <div id="checkout-items" class="checkout-items">
+                            <!-- Order items will be displayed here -->
+                        </div>
+                        
+                        <div class="checkout-total">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span id="checkout-subtotal">ر.س 0.00</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Delivery Fee:</span>
+                                <span id="checkout-delivery-fee">Free</span>
+                            </div>
+                            <div class="total-row final-total">
+                                <span>Total Amount:</span>
+                                <span id="checkout-total">ر.س 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeCheckoutModal()">Cancel</button>
+                <button type="submit" form="checkout-form" class="btn btn-primary">Place Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Confirmation Modal -->
+    <div id="order-confirmation-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Order Confirmed!</h3>
+            </div>
+            
+            <div class="modal-body">
+                <div class="confirmation-content">
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h4>Thank you for your order!</h4>
+                    <p>Your order has been successfully placed and sent to our pharmacy for processing.</p>
+                    
+                    <div class="order-details">
+                        <div class="detail-row">
+                            <span>Order Number:</span>
+                            <span id="order-number">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Estimated Delivery:</span>
+                            <span id="estimated-delivery">-</span>
+                        </div>
+                    </div>
+                    
+                    <p class="confirmation-note">
+                        You will receive SMS updates about your order status. 
+                        Our pharmacy team will contact you if there are any questions about your order.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeOrderConfirmation()">Continue Shopping</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <i class="fas fa-pills"></i>
+                        <h3>VivaLife Online Pharmacy</h3>
+                    </div>
+                    <p>Your trusted partner in health and wellness. Licensed pharmacy providing quality medications and healthcare products.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#products">Products</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="#">Prescription Filling</a></li>
+                        <li><a href="#">Home Delivery</a></li>
+                        <li><a href="#">Pharmacist Consultation</a></li>
+                        <li><a href="#">Health Screening</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Contact Info</h4>
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <span>+966 11 123 4567</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>info@vivalife.sa</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Riyadh, Saudi Arabia</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 VivaLife Online Pharmacy. All rights reserved. | Licensed by Saudi FDA</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Processing your order...</p>
+        </div>
+    </div>
+
+    <script src="js/products.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

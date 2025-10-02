@@ -158,6 +158,10 @@
                     <i class="fas fa-prescription-bottle-alt"></i>
                     <span>Dispensing</span>
                 </li>
+                <li class="nav-item" data-section="online-orders">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Online Orders</span>
+                </li>
                 <li class="nav-item" data-section="returns">
                     <i class="fas fa-undo"></i>
                     <span>Returns</span>
@@ -197,6 +201,10 @@
                 <li class="nav-item" data-section="internal-chat">
                     <i class="fas fa-comments"></i>
                     <span>Internal Chat</span>
+                </li>
+                <li class="nav-item" data-section="wasfaty">
+                    <i class="fas fa-prescription"></i>
+                    <span>Wasfaty Integration</span>
                 </li>
                 <li class="nav-item" data-section="admin">
                     <i class="fas fa-cogs"></i>
@@ -1099,6 +1107,217 @@
                             </div>
                             <div id="selected-medicine-info" class="medicine-info">
                                 <p>No medicine selected. Search for a medicine to provide context to the clinical assistant.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Online Orders Section -->
+            <section id="online-orders" class="content-section">
+                <div class="section-header">
+                    <h2>Online Store Orders</h2>
+                    <p>Manage and dispense orders received from the pharmacy's online store</p>
+                    <div class="header-actions">
+                        <button id="refresh-orders-btn" class="btn btn-primary">
+                            <i class="fas fa-sync"></i> Refresh Orders
+                        </button>
+                        <button id="export-orders-btn" class="btn btn-outline">
+                            <i class="fas fa-download"></i> Export Orders
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Order Statistics -->
+                <div class="orders-overview">
+                    <div class="orders-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="pending-orders">0</h3>
+                                <p>Pending Orders</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="preparing-orders">0</h3>
+                                <p>Preparing</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="ready-orders">0</h3>
+                                <p>Ready for Delivery</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="completed-orders">0</h3>
+                                <p>Completed Today</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Filters and Search -->
+                <div class="orders-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="order-search" placeholder="Search by order number, customer name, or phone...">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="order-status-filter">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="preparing">Preparing</option>
+                            <option value="ready">Ready for Delivery</option>
+                            <option value="out-for-delivery">Out for Delivery</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <select id="order-priority-filter">
+                            <option value="">All Priorities</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="high">High</option>
+                            <option value="normal">Normal</option>
+                        </select>
+                        <select id="delivery-method-filter">
+                            <option value="">All Delivery Methods</option>
+                            <option value="home-delivery">Home Delivery</option>
+                            <option value="pickup">Store Pickup</option>
+                            <option value="express">Express Delivery</option>
+                        </select>
+                    </div>
+                    <div class="date-filters">
+                        <input type="date" id="order-date-from" class="form-control">
+                        <span>to</span>
+                        <input type="date" id="order-date-to" class="form-control">
+                        <button id="apply-date-filter" class="btn btn-outline">Apply</button>
+                    </div>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="orders-table-container">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Delivery Method</th>
+                                <th>Order Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body">
+                            <tr>
+                                <td colspan="9" class="no-data">No orders found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Order Processing Panel -->
+                <div id="order-processing-panel" class="order-processing-panel" style="display: none;">
+                    <div class="panel-header">
+                        <h3>Processing Order: <span id="processing-order-number">#ORD001</span></h3>
+                        <button id="close-processing-panel" class="btn btn-outline">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                    
+                    <div class="processing-content">
+                        <div class="order-details">
+                            <div class="customer-info">
+                                <h4>Customer Information</h4>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Name:</label>
+                                        <span id="customer-name">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Phone:</label>
+                                        <span id="customer-phone">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Email:</label>
+                                        <span id="customer-email">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Address:</label>
+                                        <span id="customer-address">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="delivery-info">
+                                <h4>Delivery Information</h4>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Method:</label>
+                                        <span id="delivery-method">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Preferred Time:</label>
+                                        <span id="delivery-time">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Special Instructions:</label>
+                                        <span id="delivery-notes">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="order-items">
+                            <h4>Order Items</h4>
+                            <div class="items-list" id="processing-items-list">
+                                <!-- Items will be populated here -->
+                            </div>
+                        </div>
+
+                        <div class="processing-actions">
+                            <div class="status-update">
+                                <label for="order-status-update">Update Status:</label>
+                                <select id="order-status-update" class="form-control">
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="preparing">Preparing</option>
+                                    <option value="ready">Ready for Delivery</option>
+                                    <option value="out-for-delivery">Out for Delivery</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="processing-notes">
+                                <label for="processing-notes-input">Processing Notes:</label>
+                                <textarea id="processing-notes-input" class="form-control" rows="3" placeholder="Add notes about order processing..."></textarea>
+                            </div>
+                            <div class="action-buttons">
+                                <button id="update-order-status" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Order
+                                </button>
+                                <button id="print-order-label" class="btn btn-outline">
+                                    <i class="fas fa-print"></i> Print Label
+                                </button>
+                                <button id="send-notification" class="btn btn-info">
+                                    <i class="fas fa-bell"></i> Notify Customer
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -2228,6 +2447,168 @@
                                 <button class="btn btn-outline btn-sm" id="emoji-btn">
                                     <i class="fas fa-smile"></i>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Wasfaty Integration Section -->
+            <section id="wasfaty" class="content-section">
+                <div class="section-header">
+                    <h2>Wasfaty Integration</h2>
+                    <p>Saudi Arabia Electronic Prescription System Integration</p>
+                    <div class="header-actions">
+                        <button id="wasfaty-sync-btn" class="btn btn-primary">
+                            <i class="fas fa-sync"></i> Sync with Wasfaty
+                        </button>
+                        <button id="wasfaty-status-btn" class="btn btn-info">
+                            <i class="fas fa-heartbeat"></i> Check Status
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Wasfaty Status Overview -->
+                <div class="wasfaty-overview">
+                    <div class="status-cards">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="wasfaty-connection-status">Disconnected</h3>
+                                <p>Connection Status</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-prescription"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="pending-prescriptions">0</h3>
+                                <p>Pending Prescriptions</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="processed-today">0</h3>
+                                <p>Processed Today</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="sync-errors">0</h3>
+                                <p>Sync Errors</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wasfaty Configuration -->
+                <div class="wasfaty-config">
+                    <h3>Configuration Settings</h3>
+                    <div class="config-grid">
+                        <div class="config-group">
+                            <label for="wasfaty-api-url">Wasfaty API URL</label>
+                            <input type="url" id="wasfaty-api-url" class="form-control" placeholder="https://api.wasfaty.sa" readonly>
+                        </div>
+                        <div class="config-group">
+                            <label for="wasfaty-client-id">Client ID</label>
+                            <input type="text" id="wasfaty-client-id" class="form-control" placeholder="Enter Client ID">
+                        </div>
+                        <div class="config-group">
+                            <label for="wasfaty-client-secret">Client Secret</label>
+                            <input type="password" id="wasfaty-client-secret" class="form-control" placeholder="Enter Client Secret">
+                        </div>
+                        <div class="config-group">
+                            <label for="wasfaty-pharmacy-id">Pharmacy ID</label>
+                            <input type="text" id="wasfaty-pharmacy-id" class="form-control" placeholder="Enter Pharmacy ID">
+                        </div>
+                    </div>
+                    <div class="config-actions">
+                        <button id="test-connection-btn" class="btn btn-outline">
+                            <i class="fas fa-plug"></i> Test Connection
+                        </button>
+                        <button id="save-config-btn" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Prescription Management -->
+                <div class="wasfaty-prescriptions">
+                    <h3>Prescription Management</h3>
+                    <div class="prescriptions-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="prescription-search" placeholder="Search prescriptions...">
+                        </div>
+                        <div class="filter-controls">
+                            <select id="prescription-status-filter">
+                                <option value="">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="completed">Completed</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                        <button id="refresh-prescriptions-btn" class="btn btn-outline">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="prescriptions-table-container">
+                        <table class="prescriptions-table">
+                            <thead>
+                                <tr>
+                                    <th>Prescription ID</th>
+                                    <th>Patient Name</th>
+                                    <th>Physician</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prescriptions-table-body">
+                                <tr>
+                                    <td colspan="7" class="no-data">No prescriptions found</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sync Logs -->
+                <div class="wasfaty-logs">
+                    <h3>Synchronization Logs</h3>
+                    <div class="logs-controls">
+                        <select id="log-level-filter">
+                            <option value="">All Levels</option>
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="error">Error</option>
+                        </select>
+                        <button id="clear-logs-btn" class="btn btn-outline">
+                            <i class="fas fa-trash"></i> Clear Logs
+                        </button>
+                        <button id="export-logs-btn" class="btn btn-outline">
+                            <i class="fas fa-download"></i> Export Logs
+                        </button>
+                    </div>
+                    
+                    <div class="logs-container">
+                        <div id="wasfaty-logs-content" class="logs-content">
+                            <div class="log-entry info">
+                                <span class="log-time">2024-10-02 14:30:15</span>
+                                <span class="log-level">INFO</span>
+                                <span class="log-message">Wasfaty integration initialized</span>
                             </div>
                         </div>
                     </div>
