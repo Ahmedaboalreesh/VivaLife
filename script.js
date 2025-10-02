@@ -76,6 +76,23 @@ class PharmacyManagementSystem {
         this.currentChatUser = null;
         this.chatRefreshInterval = null;
         
+        // Notifications data
+        this.notifications = this.loadData('notifications') || [];
+        this.unreadNotifications = 0;
+        this.notificationDropdownOpen = false;
+        
+        // Stock Transfer data
+        this.stockTransfers = this.loadData('stockTransfers') || [];
+        this.currentTransferItems = [];
+        this.selectedTransferProduct = null;
+        
+        // Inventory Count data
+        this.inventoryCounts = this.loadData('inventoryCounts') || [];
+        this.activeCountSession = null;
+        this.countItems = [];
+        this.selectedCountProduct = null;
+        this.countSearchMethod = 'barcode';
+        
         this.init();
     }
 
@@ -86,6 +103,7 @@ class PharmacyManagementSystem {
         this.initializeLogin();
         this.loadOpenAIKey();
         this.checkClockInStatus();
+        this.initializeNotifications();
     }
 
     setupEventListeners() {
@@ -150,6 +168,10 @@ class PharmacyManagementSystem {
 
         document.getElementById('generate-expiry-report').addEventListener('click', () => {
             this.generateExpiryReport();
+        });
+
+        document.getElementById('generate-stock-transfer-report').addEventListener('click', () => {
+            this.generateStockTransferReport();
         });
 
         // Attendance Tracking functionality
@@ -233,6 +255,51 @@ class PharmacyManagementSystem {
         // Chat tabs
         document.querySelectorAll('.chat-tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchChatTab(e.target.dataset.tab));
+        });
+
+        // Notifications functionality
+        document.getElementById('notifications-btn')?.addEventListener('click', () => this.toggleNotificationsDropdown());
+        document.getElementById('mark-all-read')?.addEventListener('click', () => this.markAllNotificationsAsRead());
+        
+        // Close notifications dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.notifications-container')) {
+                this.closeNotificationsDropdown();
+            }
+        });
+
+        // Stock Transfer functionality
+        document.getElementById('stock-transfer-btn')?.addEventListener('click', () => this.openStockTransferModal());
+        document.getElementById('product-search-transfer')?.addEventListener('input', (e) => this.searchProductsForTransfer(e.target.value));
+        document.getElementById('transfer-from-pharmacy')?.addEventListener('change', () => this.updateAvailableProducts());
+        document.getElementById('transfer-to-pharmacy')?.addEventListener('change', () => this.validateTransferForm());
+
+        // Inventory Count functionality
+        document.getElementById('start-new-count-btn')?.addEventListener('click', () => this.startNewCountSession());
+        document.getElementById('view-count-history-btn')?.addEventListener('click', () => this.viewCountHistory());
+        document.getElementById('pause-count-btn')?.addEventListener('click', () => this.pauseCountSession());
+        document.getElementById('complete-count-btn')?.addEventListener('click', () => this.completeCountSession());
+        document.getElementById('cancel-count-btn')?.addEventListener('click', () => this.cancelCountSession());
+        document.getElementById('count-barcode-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchProductForCount(e.target.value);
+        });
+        document.getElementById('count-scan-btn')?.addEventListener('click', () => {
+            const barcode = document.getElementById('count-barcode-input').value;
+            this.searchProductForCount(barcode);
+        });
+        document.getElementById('count-product-search')?.addEventListener('input', (e) => this.searchProductsForCount(e.target.value));
+        document.getElementById('save-count-btn')?.addEventListener('click', () => this.saveProductCount());
+        document.getElementById('skip-item-btn')?.addEventListener('click', () => this.skipCurrentItem());
+        document.getElementById('clear-selection-btn')?.addEventListener('click', () => this.clearProductSelection());
+        document.getElementById('confirm-count-btn')?.addEventListener('click', () => this.confirmDiscrepancy());
+        document.getElementById('recount-btn')?.addEventListener('click', () => this.recountProduct());
+        document.getElementById('apply-adjustments-btn')?.addEventListener('click', () => this.applyStockAdjustments());
+        document.getElementById('export-count-report-btn')?.addEventListener('click', () => this.exportCountReport());
+        document.getElementById('save-count-session-btn')?.addEventListener('click', () => this.saveCountSession());
+        
+        // Search method switching
+        document.querySelectorAll('.search-method').forEach(method => {
+            method.addEventListener('click', (e) => this.switchCountSearchMethod(e.currentTarget.dataset.method));
         });
 
         // Clinical Support System functionality
@@ -1025,6 +1092,11 @@ class PharmacyManagementSystem {
         document.getElementById('low-stock').textContent = lowStockItems;
         document.getElementById('dispensed-today').textContent = dispensedToday;
         document.getElementById('active-staff').textContent = activeStaff;
+        
+        // Trigger notification check for low stock items
+        if (this.checkForNewNotifications) {
+            this.checkForNewNotifications();
+        }
     }
 
     getDispensedToday(dispensingHistory = null) {
@@ -13427,6 +13499,1522 @@ Please provide helpful, professional, and accurate clinical guidance.`;
             this.showMessage('Offer deleted', 'success');
         }
     }
+
+    // Notifications System
+    initializeNotifications() {
+        this.updateNotificationBadge();
+        this.checkForNewNotifications();
+        
+        // Set up periodic checks for new notifications
+        setInterval(() => {
+            this.checkForNewNotifications();
+        }, 30000); // Check every 30 seconds
+    }
+
+    checkForNewNotifications() {
+        this.checkForLowStockNotifications();
+        this.checkForChatNotifications();
+        this.updateNotificationBadge();
+    }
+
+    checkForLowStockNotifications() {
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const pharmacyProducts = this.products.filter(p => p.pharmacyId === currentPharmacyId);
+        const lowStockItems = pharmacyProducts.filter(p => p.currentStock <= p.minStock);
+        
+        // Create notifications for low stock items
+        lowStockItems.forEach(product => {
+            const existingNotification = this.notifications.find(n => 
+                n.type === 'stock' && n.productId === product.id && n.read === false
+            );
+            
+            if (!existingNotification) {
+                this.addNotification({
+                    type: 'stock',
+                    title: 'Low Stock Alert',
+                    message: `${product.name} is running low (${product.currentStock} remaining)`,
+                    productId: product.id,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+            }
+        });
+    }
+
+    checkForChatNotifications() {
+        if (!this.currentUser) return;
+        
+        // Check for new chat messages directed to current user
+        const unreadMessages = this.chatMessages.filter(msg => 
+            msg.recipientId === this.currentUser.id && !msg.read
+        );
+        
+        unreadMessages.forEach(message => {
+            const existingNotification = this.notifications.find(n => 
+                n.type === 'chat' && n.messageId === message.id
+            );
+            
+            if (!existingNotification) {
+                const sender = this.staff.find(s => s.id === message.senderId);
+                this.addNotification({
+                    type: 'chat',
+                    title: 'New Message',
+                    message: `${sender ? sender.name : 'Unknown'}: ${message.message.substring(0, 50)}${message.message.length > 50 ? '...' : ''}`,
+                    messageId: message.id,
+                    senderId: message.senderId,
+                    timestamp: message.timestamp,
+                    read: false
+                });
+            }
+        });
+    }
+
+    addNotification(notification) {
+        notification.id = this.generateNotificationId();
+        this.notifications.unshift(notification);
+        
+        // Keep only last 50 notifications
+        if (this.notifications.length > 50) {
+            this.notifications = this.notifications.slice(0, 50);
+        }
+        
+        this.saveData('notifications', this.notifications);
+        this.updateNotificationBadge();
+        this.updateNotificationsList();
+    }
+
+    generateNotificationId() {
+        return 'NOTIF_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    updateNotificationBadge() {
+        const unreadCount = this.notifications.filter(n => !n.read).length;
+        const badge = document.getElementById('notifications-badge');
+        
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        this.unreadNotifications = unreadCount;
+    }
+
+    toggleNotificationsDropdown() {
+        const dropdown = document.getElementById('notifications-dropdown');
+        if (dropdown) {
+            if (this.notificationDropdownOpen) {
+                this.closeNotificationsDropdown();
+            } else {
+                this.openNotificationsDropdown();
+            }
+        }
+    }
+
+    openNotificationsDropdown() {
+        const dropdown = document.getElementById('notifications-dropdown');
+        if (dropdown) {
+            dropdown.style.display = 'block';
+            this.notificationDropdownOpen = true;
+            this.updateNotificationsList();
+        }
+    }
+
+    closeNotificationsDropdown() {
+        const dropdown = document.getElementById('notifications-dropdown');
+        if (dropdown) {
+            dropdown.style.display = 'none';
+            this.notificationDropdownOpen = false;
+        }
+    }
+
+    updateNotificationsList() {
+        const container = document.getElementById('notifications-list');
+        if (!container) return;
+
+        if (this.notifications.length === 0) {
+            container.innerHTML = `
+                <div class="no-notifications">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>No notifications</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.notifications.map(notification => {
+            const timeAgo = this.getTimeAgo(new Date(notification.timestamp));
+            return `
+                <div class="notification-item ${!notification.read ? 'unread' : ''}" 
+                     onclick="pharmacySystem.handleNotificationClick('${notification.id}')">
+                    <div class="notification-header">
+                        <div class="notification-title">${notification.title}</div>
+                        <div class="notification-time">${timeAgo}</div>
+                    </div>
+                    <div class="notification-message">${notification.message}</div>
+                    <div class="notification-type ${notification.type}">${notification.type.toUpperCase()}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    handleNotificationClick(notificationId) {
+        const notification = this.notifications.find(n => n.id === notificationId);
+        if (!notification) return;
+
+        // Mark as read
+        notification.read = true;
+        this.saveData('notifications', this.notifications);
+        this.updateNotificationBadge();
+        this.updateNotificationsList();
+
+        // Handle different notification types
+        if (notification.type === 'chat') {
+            this.switchSection('internal-chat');
+            this.closeNotificationsDropdown();
+        } else if (notification.type === 'stock') {
+            this.switchSection('inventory');
+            this.closeNotificationsDropdown();
+        }
+    }
+
+    markAllNotificationsAsRead() {
+        this.notifications.forEach(notification => {
+            notification.read = true;
+        });
+        
+        this.saveData('notifications', this.notifications);
+        this.updateNotificationBadge();
+        this.updateNotificationsList();
+    }
+
+    getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) {
+            return 'Just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes}m ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours}h ago`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days}d ago`;
+        }
+    }
+
+    // Test method to create sample notifications (for demonstration)
+    createSampleNotifications() {
+        // Add a sample chat notification
+        this.addNotification({
+            type: 'chat',
+            title: 'New Message',
+            message: 'John Doe: Hey, can you help me with the inventory count?',
+            messageId: 'sample_msg_1',
+            senderId: 'STAFF001',
+            timestamp: new Date().toISOString(),
+            read: false
+        });
+
+        // Add a sample stock notification
+        this.addNotification({
+            type: 'stock',
+            title: 'Low Stock Alert',
+            message: 'Paracetamol 500mg is running low (5 remaining)',
+            productId: 'sample_product_1',
+            timestamp: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+            read: false
+        });
+
+        console.log('Sample notifications created for testing');
+    }
+
+    // Stock Transfer System
+    openStockTransferModal() {
+        this.resetStockTransferForm();
+        this.populatePharmacySelects();
+        this.openModal('stock-transfer-modal');
+        
+        // Ensure event listener is attached when modal opens
+        setTimeout(() => {
+            const executeBtn = document.getElementById('execute-transfer-btn');
+            if (executeBtn) {
+                // Remove any existing event listeners to avoid duplicates
+                executeBtn.replaceWith(executeBtn.cloneNode(true));
+                const newExecuteBtn = document.getElementById('execute-transfer-btn');
+                newExecuteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.executeStockTransfer();
+                });
+            }
+        }, 100);
+    }
+
+    resetStockTransferForm() {
+        document.getElementById('stock-transfer-form').reset();
+        this.currentTransferItems = [];
+        this.updateTransferItemsList();
+        this.updateTransferSummary();
+        this.validateTransferForm();
+        
+        // Clear product search
+        document.getElementById('product-search-transfer').value = '';
+        this.hideProductSuggestions();
+    }
+
+    populatePharmacySelects() {
+        const fromSelect = document.getElementById('transfer-from-pharmacy');
+        const toSelect = document.getElementById('transfer-to-pharmacy');
+        
+        // Clear existing options
+        fromSelect.innerHTML = '<option value="">Select Source Pharmacy</option>';
+        toSelect.innerHTML = '<option value="">Select Destination Pharmacy</option>';
+        
+        // Add pharmacy options
+        this.pharmacies.forEach(pharmacy => {
+            const fromOption = document.createElement('option');
+            fromOption.value = pharmacy.id;
+            fromOption.textContent = pharmacy.name;
+            fromSelect.appendChild(fromOption);
+            
+            const toOption = document.createElement('option');
+            toOption.value = pharmacy.id;
+            toOption.textContent = pharmacy.name;
+            toSelect.appendChild(toOption);
+        });
+        
+        // Set current pharmacy as default source
+        if (this.currentPharmacy) {
+            fromSelect.value = this.currentPharmacy.id;
+        }
+    }
+
+    updateAvailableProducts() {
+        // Clear current transfer items when source pharmacy changes
+        this.currentTransferItems = [];
+        this.updateTransferItemsList();
+        this.updateTransferSummary();
+        this.validateTransferForm();
+        
+        // Clear product search
+        document.getElementById('product-search-transfer').value = '';
+        this.hideProductSuggestions();
+    }
+
+    searchProductsForTransfer(query) {
+        const suggestionsContainer = document.getElementById('product-suggestions-transfer');
+        
+        if (!query || query.length < 2) {
+            this.hideProductSuggestions();
+            return;
+        }
+        
+        const fromPharmacyId = document.getElementById('transfer-from-pharmacy').value;
+        if (!fromPharmacyId) {
+            this.showMessage('Please select source pharmacy first', 'warning');
+            return;
+        }
+        
+        // Filter products by source pharmacy and search query
+        const availableProducts = this.products.filter(product => 
+            product.pharmacyId === fromPharmacyId && 
+            product.currentStock > 0 &&
+            (product.name.toLowerCase().includes(query.toLowerCase()) ||
+             product.sku.toLowerCase().includes(query.toLowerCase()))
+        );
+        
+        if (availableProducts.length === 0) {
+            suggestionsContainer.innerHTML = '<div class="autocomplete-suggestion">No products found</div>';
+        } else {
+            suggestionsContainer.innerHTML = availableProducts.map(product => `
+                <div class="autocomplete-suggestion" onclick="pharmacySystem.selectProductForTransfer('${product.id}')">
+                    <div class="suggestion-name">${product.name}</div>
+                    <div class="suggestion-details">
+                        <span>SKU: ${product.sku}</span>
+                        <span>Available: ${product.currentStock}</span>
+                        <span>Price: ر.س${product.price.toFixed(2)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        suggestionsContainer.style.display = 'block';
+    }
+
+    selectProductForTransfer(productId) {
+        const product = this.products.find(p => p.id === productId);
+        if (!product) return;
+        
+        // Check if product is already in transfer list
+        const existingItem = this.currentTransferItems.find(item => item.productId === productId);
+        if (existingItem) {
+            this.showMessage('Product already added to transfer list', 'warning');
+            this.hideProductSuggestions();
+            document.getElementById('product-search-transfer').value = '';
+            return;
+        }
+        
+        // Add product to transfer list
+        this.currentTransferItems.push({
+            productId: product.id,
+            productName: product.name,
+            productSku: product.sku,
+            availableStock: product.currentStock,
+            unitPrice: product.price,
+            transferQuantity: 1
+        });
+        
+        this.updateTransferItemsList();
+        this.updateTransferSummary();
+        this.validateTransferForm();
+        
+        // Clear search
+        this.hideProductSuggestions();
+        document.getElementById('product-search-transfer').value = '';
+    }
+
+    hideProductSuggestions() {
+        const suggestionsContainer = document.getElementById('product-suggestions-transfer');
+        suggestionsContainer.style.display = 'none';
+    }
+
+    updateTransferItemsList() {
+        const container = document.getElementById('transfer-items-list');
+        const noItemsMessage = document.getElementById('no-transfer-items');
+        
+        if (this.currentTransferItems.length === 0) {
+            container.innerHTML = '';
+            noItemsMessage.style.display = 'block';
+            return;
+        }
+        
+        noItemsMessage.style.display = 'none';
+        
+        container.innerHTML = this.currentTransferItems.map((item, index) => `
+            <div class="transfer-item">
+                <div class="item-info">
+                    <div class="item-name">${item.productName}</div>
+                    <div class="item-details">
+                        <span class="item-sku">${item.productSku}</span>
+                        <span class="item-current-stock">${item.availableStock}</span>
+                    </div>
+                </div>
+                <div class="item-transfer">
+                    <div class="quantity-input">
+                        <label>Quantity to Transfer:</label>
+                        <input type="number" class="form-control transfer-quantity" 
+                               min="1" max="${item.availableStock}" 
+                               value="${item.transferQuantity}"
+                               onchange="pharmacySystem.updateTransferQuantity(${index}, this.value)">
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn btn-danger btn-sm remove-transfer-item"
+                                onclick="pharmacySystem.removeTransferItem(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updateTransferQuantity(index, quantity) {
+        const item = this.currentTransferItems[index];
+        if (!item) return;
+        
+        const qty = parseInt(quantity);
+        if (qty < 1 || qty > item.availableStock) {
+            this.showMessage(`Quantity must be between 1 and ${item.availableStock}`, 'error');
+            return;
+        }
+        
+        item.transferQuantity = qty;
+        this.updateTransferSummary();
+        this.validateTransferForm();
+    }
+
+    removeTransferItem(index) {
+        this.currentTransferItems.splice(index, 1);
+        this.updateTransferItemsList();
+        this.updateTransferSummary();
+        this.validateTransferForm();
+    }
+
+    updateTransferSummary() {
+        const summarySection = document.getElementById('transfer-summary');
+        
+        if (this.currentTransferItems.length === 0) {
+            summarySection.style.display = 'none';
+            return;
+        }
+        
+        summarySection.style.display = 'block';
+        
+        const totalItems = this.currentTransferItems.length;
+        const totalQuantity = this.currentTransferItems.reduce((sum, item) => sum + item.transferQuantity, 0);
+        const totalValue = this.currentTransferItems.reduce((sum, item) => sum + (item.transferQuantity * item.unitPrice), 0);
+        
+        document.getElementById('total-transfer-items').textContent = totalItems;
+        document.getElementById('total-transfer-quantity').textContent = totalQuantity;
+        document.getElementById('total-transfer-value').textContent = `ر.س${totalValue.toFixed(2)}`;
+    }
+
+    validateTransferForm() {
+        const fromPharmacy = document.getElementById('transfer-from-pharmacy').value;
+        const toPharmacy = document.getElementById('transfer-to-pharmacy').value;
+        const executeBtn = document.getElementById('execute-transfer-btn');
+        
+        if (!executeBtn) {
+            return;
+        }
+        
+        const isValid = fromPharmacy && 
+                       toPharmacy && 
+                       fromPharmacy !== toPharmacy && 
+                       this.currentTransferItems.length > 0;
+        
+        executeBtn.disabled = !isValid;
+        
+        if (fromPharmacy === toPharmacy && fromPharmacy) {
+            this.showMessage('Source and destination pharmacies must be different', 'warning');
+        }
+    }
+
+    executeStockTransfer() {
+        const fromPharmacyId = document.getElementById('transfer-from-pharmacy').value;
+        const toPharmacyId = document.getElementById('transfer-to-pharmacy').value;
+        const reason = document.getElementById('transfer-reason').value;
+        const notes = document.getElementById('transfer-notes').value;
+        
+        if (!this.validateTransferData(fromPharmacyId, toPharmacyId)) {
+            return;
+        }
+        
+        // Create transfer record
+        const transfer = {
+            id: this.generateTransferId(),
+            fromPharmacyId: fromPharmacyId,
+            toPharmacyId: toPharmacyId,
+            fromPharmacyName: this.pharmacies.find(p => p.id === fromPharmacyId)?.name || 'Unknown',
+            toPharmacyName: this.pharmacies.find(p => p.id === toPharmacyId)?.name || 'Unknown',
+            reason: reason,
+            notes: notes,
+            items: [...this.currentTransferItems],
+            totalItems: this.currentTransferItems.length,
+            totalQuantity: this.currentTransferItems.reduce((sum, item) => sum + item.transferQuantity, 0),
+            totalValue: this.currentTransferItems.reduce((sum, item) => sum + (item.transferQuantity * item.unitPrice), 0),
+            transferredBy: this.currentUser?.name || 'Unknown',
+            transferredById: this.currentUser?.id || 'unknown',
+            timestamp: new Date().toISOString(),
+            status: 'completed'
+        };
+        
+        // Update product stocks
+        this.updateProductStocks(transfer);
+        
+        // Save transfer record
+        this.stockTransfers.unshift(transfer);
+        this.saveData('stockTransfers', this.stockTransfers);
+        
+        // Create notifications for both pharmacies
+        this.createTransferNotifications(transfer);
+        
+        // Close modal and show success message
+        this.closeModal('stock-transfer-modal');
+        this.showMessage(`Stock transfer completed successfully! ${transfer.totalQuantity} items transferred.`, 'success');
+        
+        // Update dashboard if we're on it
+        if (document.getElementById('dashboard').classList.contains('active')) {
+            this.updateDashboardStats();
+        }
+    }
+
+    validateTransferData(fromPharmacyId, toPharmacyId) {
+        if (!fromPharmacyId || !toPharmacyId) {
+            this.showMessage('Please select both source and destination pharmacies', 'error');
+            return false;
+        }
+        
+        if (fromPharmacyId === toPharmacyId) {
+            this.showMessage('Source and destination pharmacies must be different', 'error');
+            return false;
+        }
+        
+        if (this.currentTransferItems.length === 0) {
+            this.showMessage('Please add at least one product to transfer', 'error');
+            return false;
+        }
+        
+        // Validate quantities
+        for (const item of this.currentTransferItems) {
+            if (item.transferQuantity < 1 || item.transferQuantity > item.availableStock) {
+                this.showMessage(`Invalid quantity for ${item.productName}`, 'error');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    updateProductStocks(transfer) {
+        transfer.items.forEach(item => {
+            // Find source product and reduce stock
+            const sourceProduct = this.products.find(p => 
+                p.id === item.productId && p.pharmacyId === transfer.fromPharmacyId
+            );
+            
+            if (sourceProduct) {
+                sourceProduct.currentStock -= item.transferQuantity;
+            }
+            
+            // Find or create destination product and increase stock
+            let destProduct = this.products.find(p => 
+                p.id === item.productId && p.pharmacyId === transfer.toPharmacyId
+            );
+            
+            if (destProduct) {
+                destProduct.currentStock += item.transferQuantity;
+            } else {
+                // Create new product entry for destination pharmacy
+                const newProduct = { ...sourceProduct };
+                newProduct.id = this.generateUniqueId();
+                newProduct.pharmacyId = transfer.toPharmacyId;
+                newProduct.currentStock = item.transferQuantity;
+                this.products.push(newProduct);
+            }
+        });
+        
+        this.saveData('products', this.products);
+    }
+
+    createTransferNotifications(transfer) {
+        // Notification for source pharmacy
+        this.addNotification({
+            type: 'stock',
+            title: 'Stock Transfer - Outgoing',
+            message: `${transfer.totalQuantity} items transferred to ${transfer.toPharmacyName}`,
+            transferId: transfer.id,
+            timestamp: transfer.timestamp,
+            read: false
+        });
+        
+        // Notification for destination pharmacy (if different from current user's pharmacy)
+        if (transfer.toPharmacyId !== this.currentPharmacy?.id) {
+            this.addNotification({
+                type: 'stock',
+                title: 'Stock Transfer - Incoming',
+                message: `${transfer.totalQuantity} items received from ${transfer.fromPharmacyName}`,
+                transferId: transfer.id,
+                timestamp: transfer.timestamp,
+                read: false
+            });
+        }
+    }
+
+    generateTransferId() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `TRANS${timestamp}${random}`;
+    }
+
+    // Method to view transfer history (can be called from console or added to UI later)
+    viewTransferHistory() {
+        console.table(this.stockTransfers.map(transfer => ({
+            ID: transfer.id,
+            From: transfer.fromPharmacyName,
+            To: transfer.toPharmacyName,
+            Items: transfer.totalItems,
+            Quantity: transfer.totalQuantity,
+            Value: `ر.س${transfer.totalValue.toFixed(2)}`,
+            Date: new Date(transfer.timestamp).toLocaleDateString(),
+            Status: transfer.status
+        })));
+        return this.stockTransfers;
+    }
+
+    // Test method to debug transfer functionality
+    testTransferButton() {
+        const executeBtn = document.getElementById('execute-transfer-btn');
+        console.log('Execute button found:', !!executeBtn);
+        console.log('Execute button disabled:', executeBtn?.disabled);
+        console.log('Current transfer items:', this.currentTransferItems.length);
+        console.log('From pharmacy:', document.getElementById('transfer-from-pharmacy')?.value);
+        console.log('To pharmacy:', document.getElementById('transfer-to-pharmacy')?.value);
+        
+        if (executeBtn) {
+            executeBtn.click();
+        }
+    }
+
+    // Method to create sample transfer for testing
+    createSampleTransfer() {
+        // Open the modal first
+        this.openStockTransferModal();
+        
+        // Wait for modal to open, then populate with sample data
+        setTimeout(() => {
+            // Set pharmacies (assuming at least 2 exist)
+            if (this.pharmacies.length >= 2) {
+                document.getElementById('transfer-from-pharmacy').value = this.pharmacies[0].id;
+                document.getElementById('transfer-to-pharmacy').value = this.pharmacies[1].id;
+            }
+            
+            // Add a sample product if available
+            if (this.products.length > 0) {
+                const sampleProduct = this.products.find(p => p.currentStock > 0);
+                if (sampleProduct) {
+                    this.selectProductForTransfer(sampleProduct.id);
+                }
+            }
+            
+            // Set reason
+            document.getElementById('transfer-reason').value = 'stock-shortage';
+            document.getElementById('transfer-notes').value = 'Sample transfer for testing';
+            
+            console.log('Sample transfer data populated. Check the modal and try the Execute Transfer button.');
+        }, 200);
+    }
+
+    // Stock Transfer Report Generation
+    generateStockTransferReport() {
+        const transfers = this.stockTransfers || [];
+        const currentDate = new Date().toLocaleDateString('en-GB');
+        const currentTime = new Date().toLocaleTimeString();
+        
+        // Calculate summary statistics
+        const totalTransfers = transfers.length;
+        const totalItemsTransferred = transfers.reduce((sum, transfer) => sum + transfer.totalQuantity, 0);
+        const totalValueTransferred = transfers.reduce((sum, transfer) => sum + transfer.totalValue, 0);
+        
+        // Get unique pharmacies involved in transfers
+        const uniquePharmacies = new Set();
+        transfers.forEach(transfer => {
+            uniquePharmacies.add(transfer.fromPharmacyName);
+            uniquePharmacies.add(transfer.toPharmacyName);
+        });
+        
+        // Calculate transfers by pharmacy
+        const pharmacyStats = {};
+        transfers.forEach(transfer => {
+            // Outgoing transfers
+            if (!pharmacyStats[transfer.fromPharmacyName]) {
+                pharmacyStats[transfer.fromPharmacyName] = { outgoing: 0, incoming: 0, outValue: 0, inValue: 0 };
+            }
+            pharmacyStats[transfer.fromPharmacyName].outgoing += transfer.totalQuantity;
+            pharmacyStats[transfer.fromPharmacyName].outValue += transfer.totalValue;
+            
+            // Incoming transfers
+            if (!pharmacyStats[transfer.toPharmacyName]) {
+                pharmacyStats[transfer.toPharmacyName] = { outgoing: 0, incoming: 0, outValue: 0, inValue: 0 };
+            }
+            pharmacyStats[transfer.toPharmacyName].incoming += transfer.totalQuantity;
+            pharmacyStats[transfer.toPharmacyName].inValue += transfer.totalValue;
+        });
+        
+        // Get recent transfers (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentTransfers = transfers.filter(transfer => 
+            new Date(transfer.timestamp) >= thirtyDaysAgo
+        );
+        
+        // Generate report HTML
+        const reportHTML = `
+            <div class="report-header-info">
+                <div class="report-meta">
+                    <p><strong>Generated:</strong> ${currentDate} at ${currentTime}</p>
+                    <p><strong>Report Period:</strong> All Time</p>
+                    <p><strong>Total Records:</strong> ${totalTransfers} transfers</p>
+                </div>
+            </div>
+
+            <div class="report-summary">
+                <div class="report-summary-item">
+                    <h4>Total Transfers</h4>
+                    <p>All time</p>
+                    <span class="value">${totalTransfers}</span>
+                </div>
+                <div class="report-summary-item">
+                    <h4>Items Transferred</h4>
+                    <p>Total quantity</p>
+                    <span class="value">${totalItemsTransferred.toLocaleString()}</span>
+                </div>
+                <div class="report-summary-item">
+                    <h4>Total Value</h4>
+                    <p>Transferred worth</p>
+                    <span class="value">${this.formatCurrency(totalValueTransferred)}</span>
+                </div>
+                <div class="report-summary-item">
+                    <h4>Recent Activity</h4>
+                    <p>Last 30 days</p>
+                    <span class="value">${recentTransfers.length}</span>
+                </div>
+            </div>
+
+            ${Object.keys(pharmacyStats).length > 0 ? `
+            <h4>Pharmacy Transfer Summary</h4>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Pharmacy</th>
+                        <th>Items Sent</th>
+                        <th>Value Sent</th>
+                        <th>Items Received</th>
+                        <th>Value Received</th>
+                        <th>Net Flow</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(pharmacyStats).map(([pharmacy, stats]) => {
+                        const netFlow = stats.incoming - stats.outgoing;
+                        const netFlowClass = netFlow > 0 ? 'positive' : netFlow < 0 ? 'negative' : 'neutral';
+                        return `
+                        <tr>
+                            <td><strong>${pharmacy}</strong></td>
+                            <td>${stats.outgoing.toLocaleString()}</td>
+                            <td>${this.formatCurrency(stats.outValue)}</td>
+                            <td>${stats.incoming.toLocaleString()}</td>
+                            <td>${this.formatCurrency(stats.inValue)}</td>
+                            <td class="${netFlowClass}">${netFlow > 0 ? '+' : ''}${netFlow.toLocaleString()}</td>
+                        </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+            ` : ''}
+
+            <h4>Transfer History</h4>
+            ${transfers.length > 0 ? `
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Transfer ID</th>
+                        <th>Date</th>
+                        <th>From Pharmacy</th>
+                        <th>To Pharmacy</th>
+                        <th>Items</th>
+                        <th>Quantity</th>
+                        <th>Value</th>
+                        <th>Reason</th>
+                        <th>Transferred By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${transfers.slice(0, 100).map(transfer => `
+                        <tr>
+                            <td><code>${transfer.id}</code></td>
+                            <td>${new Date(transfer.timestamp).toLocaleDateString('en-GB')}</td>
+                            <td>${transfer.fromPharmacyName}</td>
+                            <td>${transfer.toPharmacyName}</td>
+                            <td>${transfer.totalItems}</td>
+                            <td>${transfer.totalQuantity.toLocaleString()}</td>
+                            <td>${this.formatCurrency(transfer.totalValue)}</td>
+                            <td>${transfer.reason ? this.capitalizeFirst(transfer.reason.replace('-', ' ')) : 'Not specified'}</td>
+                            <td>${transfer.transferredBy}</td>
+                        </tr>
+                    `).join('')}
+                    ${transfers.length > 100 ? `
+                    <tr>
+                        <td colspan="9" class="text-center" style="font-style: italic; color: #666;">
+                            Showing first 100 transfers. Total: ${transfers.length} transfers.
+                        </td>
+                    </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+            ` : `
+            <div class="no-data-message">
+                <i class="fas fa-exchange-alt"></i>
+                <p>No stock transfers found.</p>
+                <p>Stock transfers will appear here once you start transferring inventory between pharmacies.</p>
+            </div>
+            `}
+
+            ${transfers.length > 0 ? `
+            <h4>Transfer Details</h4>
+            <div class="transfer-details-section">
+                ${transfers.slice(0, 10).map(transfer => `
+                    <div class="transfer-detail-card">
+                        <div class="transfer-detail-header">
+                            <h5>Transfer ${transfer.id}</h5>
+                            <span class="transfer-date">${new Date(transfer.timestamp).toLocaleDateString('en-GB')}</span>
+                        </div>
+                        <div class="transfer-detail-info">
+                            <p><strong>Route:</strong> ${transfer.fromPharmacyName} → ${transfer.toPharmacyName}</p>
+                            <p><strong>Reason:</strong> ${transfer.reason ? this.capitalizeFirst(transfer.reason.replace('-', ' ')) : 'Not specified'}</p>
+                            ${transfer.notes ? `<p><strong>Notes:</strong> ${transfer.notes}</p>` : ''}
+                        </div>
+                        <div class="transfer-items">
+                            <h6>Items Transferred:</h6>
+                            <ul>
+                                ${transfer.items.map(item => `
+                                    <li>${item.productName} (${item.productSku}) - Qty: ${item.transferQuantity}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `).join('')}
+                ${transfers.length > 10 ? `
+                <p class="text-center" style="font-style: italic; color: #666; margin-top: 1rem;">
+                    Showing first 10 detailed transfers. Total: ${transfers.length} transfers.
+                </p>
+                ` : ''}
+            </div>
+            ` : ''}
+        `;
+
+        this.displayReport('Stock Transfer Report', reportHTML);
+    }
+
+    // Method to create sample transfer data for testing the report
+    createSampleTransferData() {
+        if (this.pharmacies.length < 2) {
+            console.log('Need at least 2 pharmacies to create sample transfers');
+            return;
+        }
+
+        const sampleTransfers = [
+            {
+                id: 'TRANS12345001',
+                fromPharmacyId: this.pharmacies[0].id,
+                toPharmacyId: this.pharmacies[1].id,
+                fromPharmacyName: this.pharmacies[0].name,
+                toPharmacyName: this.pharmacies[1].name,
+                reason: 'stock-shortage',
+                notes: 'Emergency transfer for high-demand items',
+                items: [
+                    {
+                        productId: 'PROD001',
+                        productName: 'Paracetamol 500mg',
+                        productSku: 'PAR500',
+                        transferQuantity: 50,
+                        unitPrice: 2.50
+                    },
+                    {
+                        productId: 'PROD002',
+                        productName: 'Ibuprofen 400mg',
+                        productSku: 'IBU400',
+                        transferQuantity: 30,
+                        unitPrice: 3.75
+                    }
+                ],
+                totalItems: 2,
+                totalQuantity: 80,
+                totalValue: 237.50,
+                transferredBy: 'Ahmed Al-Reesh',
+                transferredById: 'STAFF001',
+                timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+                status: 'completed'
+            },
+            {
+                id: 'TRANS12345002',
+                fromPharmacyId: this.pharmacies[1].id,
+                toPharmacyId: this.pharmacies[0].id,
+                fromPharmacyName: this.pharmacies[1].name,
+                toPharmacyName: this.pharmacies[0].name,
+                reason: 'excess-stock',
+                notes: 'Redistributing excess inventory',
+                items: [
+                    {
+                        productId: 'PROD003',
+                        productName: 'Vitamin D3 1000IU',
+                        productSku: 'VIT1000',
+                        transferQuantity: 25,
+                        unitPrice: 15.00
+                    }
+                ],
+                totalItems: 1,
+                totalQuantity: 25,
+                totalValue: 375.00,
+                transferredBy: 'Sarah Johnson',
+                transferredById: 'STAFF002',
+                timestamp: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+                status: 'completed'
+            },
+            {
+                id: 'TRANS12345003',
+                fromPharmacyId: this.pharmacies[0].id,
+                toPharmacyId: this.pharmacies[1].id,
+                fromPharmacyName: this.pharmacies[0].name,
+                toPharmacyName: this.pharmacies[1].name,
+                reason: 'expiry-management',
+                notes: 'Moving items with earlier expiry dates',
+                items: [
+                    {
+                        productId: 'PROD004',
+                        productName: 'Amoxicillin 250mg',
+                        productSku: 'AMX250',
+                        transferQuantity: 40,
+                        unitPrice: 8.50
+                    },
+                    {
+                        productId: 'PROD005',
+                        productName: 'Cough Syrup 100ml',
+                        productSku: 'COU100',
+                        transferQuantity: 15,
+                        unitPrice: 12.00
+                    }
+                ],
+                totalItems: 2,
+                totalQuantity: 55,
+                totalValue: 520.00,
+                transferredBy: 'Mohammed Ali',
+                transferredById: 'STAFF003',
+                timestamp: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
+                status: 'completed'
+            }
+        ];
+
+        // Add sample transfers to the beginning of the array
+        this.stockTransfers = [...sampleTransfers, ...this.stockTransfers];
+        this.saveData('stockTransfers', this.stockTransfers);
+        
+        console.log('Sample transfer data created successfully!');
+        console.log(`Total transfers: ${this.stockTransfers.length}`);
+        
+        return sampleTransfers;
+    }
+
+    // Inventory Count System
+    startNewCountSession() {
+        if (this.activeCountSession) {
+            if (!confirm('There is already an active count session. Do you want to cancel it and start a new one?')) {
+                return;
+            }
+        }
+
+        const currentPharmacyId = this.currentPharmacy ? this.currentPharmacy.id : 'PHARM001';
+        const pharmacyProducts = this.products.filter(p => p.pharmacyId === currentPharmacyId);
+
+        this.activeCountSession = {
+            id: this.generateCountSessionId(),
+            pharmacyId: currentPharmacyId,
+            pharmacyName: this.currentPharmacy ? this.currentPharmacy.name : 'Default Pharmacy',
+            startTime: new Date().toISOString(),
+            countedBy: this.currentUser?.name || 'Unknown',
+            countedById: this.currentUser?.id || 'unknown',
+            status: 'active',
+            totalItems: pharmacyProducts.length,
+            countedItems: 0,
+            discrepancies: 0
+        };
+
+        // Initialize count items from current inventory
+        this.countItems = pharmacyProducts.map(product => ({
+            productId: product.id,
+            productName: product.name,
+            productSku: product.sku,
+            productCategory: product.category,
+            systemStock: product.currentStock,
+            physicalCount: null,
+            difference: null,
+            status: 'not-counted',
+            lastCountDate: null,
+            notes: ''
+        }));
+
+        this.showActiveCountSession();
+        this.updateCountStats();
+        this.showMessage('New count session started successfully!', 'success');
+    }
+
+    showActiveCountSession() {
+        document.getElementById('active-count-session').style.display = 'block';
+        document.getElementById('count-browse-mode').style.display = 'block';
+        
+        // Update session info
+        document.getElementById('session-id').textContent = `Count #${this.activeCountSession.id}`;
+        document.getElementById('session-date').textContent = `Started: ${new Date(this.activeCountSession.startTime).toLocaleString()}`;
+        document.getElementById('session-counter').textContent = `Counter: ${this.activeCountSession.countedBy}`;
+        
+        this.updateCountProgress();
+        this.loadCountItemsTable();
+    }
+
+    updateCountStats() {
+        if (!this.activeCountSession) {
+            document.getElementById('active-counts').textContent = '0';
+            document.getElementById('completed-counts').textContent = '0';
+            document.getElementById('discrepancies-found').textContent = '0';
+            document.getElementById('adjustments-needed').textContent = '0';
+            return;
+        }
+
+        const countedItems = this.countItems.filter(item => item.status === 'counted').length;
+        const discrepancies = this.countItems.filter(item => item.difference !== 0 && item.status === 'counted').length;
+        const adjustmentsNeeded = this.countItems.filter(item => item.difference !== 0 && item.status === 'counted').length;
+
+        document.getElementById('active-counts').textContent = this.activeCountSession ? '1' : '0';
+        document.getElementById('completed-counts').textContent = countedItems;
+        document.getElementById('discrepancies-found').textContent = discrepancies;
+        document.getElementById('adjustments-needed').textContent = adjustmentsNeeded;
+    }
+
+    updateCountProgress() {
+        if (!this.activeCountSession) return;
+
+        const totalItems = this.countItems.length;
+        const countedItems = this.countItems.filter(item => item.status === 'counted').length;
+        const percentage = totalItems > 0 ? Math.round((countedItems / totalItems) * 100) : 0;
+
+        document.getElementById('count-progress-text').textContent = `${countedItems} of ${totalItems} items counted`;
+        document.getElementById('count-percentage').textContent = `${percentage}%`;
+        document.getElementById('count-progress-fill').style.width = `${percentage}%`;
+
+        this.activeCountSession.countedItems = countedItems;
+    }
+
+    switchCountSearchMethod(method) {
+        this.countSearchMethod = method;
+        
+        // Update active method
+        document.querySelectorAll('.search-method').forEach(m => m.classList.remove('active'));
+        document.querySelector(`[data-method="${method}"]`).classList.add('active');
+        
+        // Show/hide input methods
+        document.querySelectorAll('.input-method').forEach(m => m.classList.remove('active'));
+        document.getElementById(`${method}-input-section`).classList.add('active');
+        
+        // Clear previous selections
+        this.clearProductSelection();
+    }
+
+    searchProductForCount(query) {
+        if (!query || !this.activeCountSession) return;
+
+        const currentPharmacyId = this.activeCountSession.pharmacyId;
+        const product = this.products.find(p => 
+            p.pharmacyId === currentPharmacyId && 
+            (p.sku.toLowerCase() === query.toLowerCase() || 
+             p.name.toLowerCase().includes(query.toLowerCase()))
+        );
+
+        if (product) {
+            this.selectProductForCount(product);
+            document.getElementById('count-barcode-input').value = '';
+        } else {
+            this.showMessage('Product not found. Please check the barcode/SKU.', 'error');
+        }
+    }
+
+    searchProductsForCount(query) {
+        const suggestionsContainer = document.getElementById('count-product-suggestions');
+        
+        if (!query || query.length < 2 || !this.activeCountSession) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        const currentPharmacyId = this.activeCountSession.pharmacyId;
+        const matchingProducts = this.products.filter(product => 
+            product.pharmacyId === currentPharmacyId &&
+            product.name.toLowerCase().includes(query.toLowerCase())
+        );
+
+        if (matchingProducts.length === 0) {
+            suggestionsContainer.innerHTML = '<div class="suggestion">No products found</div>';
+        } else {
+            suggestionsContainer.innerHTML = matchingProducts.slice(0, 10).map(product => `
+                <div class="suggestion" onclick="pharmacySystem.selectProductForCount(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                    <div class="suggestion-name">${product.name}</div>
+                    <div class="suggestion-details">SKU: ${product.sku} | Stock: ${product.currentStock}</div>
+                </div>
+            `).join('');
+        }
+        
+        suggestionsContainer.style.display = 'block';
+    }
+
+    selectProductForCount(product) {
+        this.selectedCountProduct = product;
+        
+        // Find existing count item
+        const countItem = this.countItems.find(item => item.productId === product.id);
+        
+        // Update product details
+        document.getElementById('selected-product-name').textContent = product.name;
+        document.getElementById('selected-product-sku').textContent = product.sku;
+        document.getElementById('selected-product-category').textContent = this.capitalizeFirst(product.category);
+        document.getElementById('selected-product-system-stock').textContent = product.currentStock;
+        document.getElementById('selected-product-last-count').textContent = countItem?.lastCountDate ? 
+            new Date(countItem.lastCountDate).toLocaleDateString() : 'Never';
+        
+        // Set current physical count if already counted
+        const physicalCountInput = document.getElementById('physical-count-input');
+        physicalCountInput.value = countItem?.physicalCount !== null ? countItem.physicalCount : '';
+        
+        // Show the selected product section
+        document.getElementById('selected-product-count').style.display = 'block';
+        
+        // Hide suggestions
+        document.getElementById('count-product-suggestions').style.display = 'none';
+        document.getElementById('count-product-search').value = '';
+        
+        // Focus on count input
+        physicalCountInput.focus();
+    }
+
+    saveProductCount() {
+        if (!this.selectedCountProduct || !this.activeCountSession) return;
+
+        const physicalCount = parseInt(document.getElementById('physical-count-input').value);
+        if (isNaN(physicalCount) || physicalCount < 0) {
+            this.showMessage('Please enter a valid physical count (0 or greater)', 'error');
+            return;
+        }
+
+        const countItem = this.countItems.find(item => item.productId === this.selectedCountProduct.id);
+        if (!countItem) return;
+
+        // Update count item
+        countItem.physicalCount = physicalCount;
+        countItem.difference = physicalCount - countItem.systemStock;
+        countItem.status = 'counted';
+        countItem.lastCountDate = new Date().toISOString();
+
+        // Check for discrepancy
+        if (countItem.difference !== 0) {
+            this.showDiscrepancyAlert(countItem);
+        } else {
+            this.finalizeSaveCount();
+        }
+    }
+
+    showDiscrepancyAlert(countItem) {
+        const discrepancyAlert = document.getElementById('discrepancy-alert');
+        const discrepancyAmount = document.getElementById('discrepancy-amount');
+        
+        const difference = countItem.difference;
+        const sign = difference > 0 ? '+' : '';
+        discrepancyAmount.textContent = `${sign}${difference}`;
+        discrepancyAmount.className = difference > 0 ? 'difference-positive' : 'difference-negative';
+        
+        discrepancyAlert.style.display = 'block';
+    }
+
+    confirmDiscrepancy() {
+        this.finalizeSaveCount();
+    }
+
+    recountProduct() {
+        document.getElementById('discrepancy-alert').style.display = 'none';
+        document.getElementById('physical-count-input').focus();
+        document.getElementById('physical-count-input').select();
+    }
+
+    finalizeSaveCount() {
+        document.getElementById('discrepancy-alert').style.display = 'none';
+        this.updateCountProgress();
+        this.updateCountStats();
+        this.loadCountItemsTable();
+        this.clearProductSelection();
+        this.showMessage('Count saved successfully!', 'success');
+        
+        // Check if count is complete
+        const remainingItems = this.countItems.filter(item => item.status === 'not-counted').length;
+        if (remainingItems === 0) {
+            this.showCountSummary();
+        }
+    }
+
+    skipCurrentItem() {
+        if (!this.selectedCountProduct) return;
+        
+        const countItem = this.countItems.find(item => item.productId === this.selectedCountProduct.id);
+        if (countItem) {
+            countItem.status = 'skipped';
+        }
+        
+        this.clearProductSelection();
+        this.updateCountProgress();
+        this.loadCountItemsTable();
+    }
+
+    clearProductSelection() {
+        this.selectedCountProduct = null;
+        document.getElementById('selected-product-count').style.display = 'none';
+        document.getElementById('discrepancy-alert').style.display = 'none';
+        document.getElementById('physical-count-input').value = '';
+        document.getElementById('count-product-suggestions').style.display = 'none';
+    }
+
+    loadCountItemsTable() {
+        const tbody = document.getElementById('count-items-table-body');
+        if (!tbody || !this.activeCountSession) return;
+
+        tbody.innerHTML = this.countItems.map(item => {
+            const statusClass = `status-${item.status.replace('-', '-')}`;
+            const differenceClass = item.difference === null ? '' : 
+                item.difference > 0 ? 'difference-positive' : 
+                item.difference < 0 ? 'difference-negative' : 'difference-zero';
+            
+            return `
+                <tr>
+                    <td>${item.productName}</td>
+                    <td>${item.productSku}</td>
+                    <td>${this.capitalizeFirst(item.productCategory)}</td>
+                    <td>${item.systemStock}</td>
+                    <td>${item.physicalCount !== null ? item.physicalCount : '-'}</td>
+                    <td class="${differenceClass}">
+                        ${item.difference !== null ? (item.difference > 0 ? '+' : '') + item.difference : '-'}
+                    </td>
+                    <td class="${statusClass}">${this.capitalizeFirst(item.status.replace('-', ' '))}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="pharmacySystem.selectProductForCountById('${item.productId}')">
+                            ${item.status === 'counted' ? 'Recount' : 'Count'}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    selectProductForCountById(productId) {
+        const product = this.products.find(p => p.id === productId);
+        if (product) {
+            this.selectProductForCount(product);
+        }
+    }
+
+    showCountSummary() {
+        const countedItems = this.countItems.filter(item => item.status === 'counted');
+        const discrepancies = countedItems.filter(item => item.difference !== 0);
+        const totalAdjustmentValue = discrepancies.reduce((sum, item) => {
+            const product = this.products.find(p => p.id === item.productId);
+            return sum + (item.difference * (product?.price || 0));
+        }, 0);
+        const accuracyRate = countedItems.length > 0 ? 
+            Math.round(((countedItems.length - discrepancies.length) / countedItems.length) * 100) : 100;
+
+        // Update summary stats
+        document.getElementById('summary-items-counted').textContent = countedItems.length;
+        document.getElementById('summary-discrepancies').textContent = discrepancies.length;
+        document.getElementById('summary-adjustment-value').textContent = this.formatCurrency(Math.abs(totalAdjustmentValue));
+        document.getElementById('summary-accuracy-rate').textContent = `${accuracyRate}%`;
+
+        // Load discrepancies table
+        this.loadDiscrepanciesTable(discrepancies);
+
+        // Show summary section
+        document.getElementById('count-summary').style.display = 'block';
+        document.getElementById('count-summary').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    loadDiscrepanciesTable(discrepancies) {
+        const tbody = document.getElementById('discrepancies-table-body');
+        if (!tbody) return;
+
+        if (discrepancies.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No discrepancies found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = discrepancies.map(item => {
+            const product = this.products.find(p => p.id === item.productId);
+            const valueImpact = item.difference * (product?.price || 0);
+            const differenceClass = item.difference > 0 ? 'difference-positive' : 'difference-negative';
+            const valueClass = valueImpact > 0 ? 'difference-positive' : 'difference-negative';
+
+            return `
+                <tr>
+                    <td>${item.productName}</td>
+                    <td>${item.systemStock}</td>
+                    <td>${item.physicalCount}</td>
+                    <td class="${differenceClass}">
+                        ${item.difference > 0 ? '+' : ''}${item.difference}
+                    </td>
+                    <td class="${valueClass}">
+                        ${this.formatCurrency(Math.abs(valueImpact))}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="pharmacySystem.adjustSingleProduct('${item.productId}')">
+                            Adjust Stock
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    applyStockAdjustments() {
+        if (!this.activeCountSession) return;
+
+        const discrepancies = this.countItems.filter(item => item.difference !== 0 && item.status === 'counted');
+        if (discrepancies.length === 0) {
+            this.showMessage('No adjustments needed', 'info');
+            return;
+        }
+
+        if (!confirm(`Apply stock adjustments for ${discrepancies.length} items? This will update your inventory.`)) {
+            return;
+        }
+
+        let adjustedCount = 0;
+        discrepancies.forEach(item => {
+            const product = this.products.find(p => p.id === item.productId);
+            if (product) {
+                product.currentStock = item.physicalCount;
+                adjustedCount++;
+            }
+        });
+
+        // Save updated products
+        this.saveData('products', this.products);
+
+        // Update dashboard if visible
+        if (document.getElementById('dashboard').classList.contains('active')) {
+            this.updateDashboardStats();
+        }
+
+        this.showMessage(`Stock adjustments applied for ${adjustedCount} items`, 'success');
+    }
+
+    adjustSingleProduct(productId) {
+        const countItem = this.countItems.find(item => item.productId === productId);
+        const product = this.products.find(p => p.id === productId);
+        
+        if (!countItem || !product) return;
+
+        if (confirm(`Adjust ${product.name} stock from ${product.currentStock} to ${countItem.physicalCount}?`)) {
+            product.currentStock = countItem.physicalCount;
+            this.saveData('products', this.products);
+            this.showMessage(`Stock adjusted for ${product.name}`, 'success');
+            
+            // Update dashboard if visible
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                this.updateDashboardStats();
+            }
+        }
+    }
+
+    completeCountSession() {
+        if (!this.activeCountSession) return;
+
+        const uncountedItems = this.countItems.filter(item => item.status === 'not-counted').length;
+        if (uncountedItems > 0) {
+            if (!confirm(`There are ${uncountedItems} items not counted yet. Complete the count session anyway?`)) {
+                return;
+            }
+        }
+
+        this.activeCountSession.endTime = new Date().toISOString();
+        this.activeCountSession.status = 'completed';
+        this.activeCountSession.countedItems = this.countItems.filter(item => item.status === 'counted').length;
+        this.activeCountSession.discrepancies = this.countItems.filter(item => item.difference !== 0 && item.status === 'counted').length;
+
+        // Save count session to history
+        this.inventoryCounts.unshift({
+            ...this.activeCountSession,
+            items: [...this.countItems]
+        });
+        this.saveData('inventoryCounts', this.inventoryCounts);
+
+        // Clear active session
+        this.activeCountSession = null;
+        this.countItems = [];
+        this.selectedCountProduct = null;
+
+        // Hide active session UI
+        document.getElementById('active-count-session').style.display = 'none';
+        document.getElementById('count-browse-mode').style.display = 'none';
+        document.getElementById('count-summary').style.display = 'none';
+
+        this.updateCountStats();
+        this.showMessage('Count session completed successfully!', 'success');
+    }
+
+    pauseCountSession() {
+        if (!this.activeCountSession) return;
+
+        this.activeCountSession.status = 'paused';
+        this.showMessage('Count session paused. You can resume it later.', 'info');
+    }
+
+    cancelCountSession() {
+        if (!this.activeCountSession) return;
+
+        if (!confirm('Are you sure you want to cancel the current count session? All progress will be lost.')) {
+            return;
+        }
+
+        this.activeCountSession = null;
+        this.countItems = [];
+        this.selectedCountProduct = null;
+
+        // Hide active session UI
+        document.getElementById('active-count-session').style.display = 'none';
+        document.getElementById('count-browse-mode').style.display = 'none';
+        document.getElementById('count-summary').style.display = 'none';
+
+        this.updateCountStats();
+        this.showMessage('Count session cancelled', 'info');
+    }
+
+    saveCountSession() {
+        if (!this.activeCountSession) return;
+
+        // Save current progress
+        this.inventoryCounts = this.inventoryCounts.filter(count => count.id !== this.activeCountSession.id);
+        this.inventoryCounts.unshift({
+            ...this.activeCountSession,
+            items: [...this.countItems],
+            lastSaved: new Date().toISOString()
+        });
+        this.saveData('inventoryCounts', this.inventoryCounts);
+
+        this.showMessage('Count session saved successfully!', 'success');
+    }
+
+    exportCountReport() {
+        if (!this.activeCountSession) return;
+
+        // This would generate and download a count report
+        this.showMessage('Count report export functionality coming soon', 'info');
+    }
+
+    viewCountHistory() {
+        // This would show count history
+        this.showMessage('Count history view coming soon', 'info');
+    }
+
+    generateCountSessionId() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `CNT${timestamp}${random}`;
+    }
+
+    // Test method to demonstrate inventory count functionality
+    testInventoryCount() {
+        console.log('Testing Inventory Count System:');
+        console.log('1. Go to Inventory Count section');
+        console.log('2. Click "Start New Count" button');
+        console.log('3. Use barcode scanner or search to find products');
+        console.log('4. Enter physical counts and save');
+        console.log('5. Review discrepancies and apply adjustments');
+        
+        // Automatically switch to inventory count section for testing
+        this.switchSection('inventory-count');
+        
+        return {
+            totalProducts: this.products.length,
+            activeCounts: this.activeCountSession ? 1 : 0,
+            countHistory: this.inventoryCounts.length
+        };
+    }
+}
+
+// Global function for count adjustments (called from HTML)
+function adjustCount(amount) {
+    const input = document.getElementById('physical-count-input');
+    const currentValue = parseInt(input.value) || 0;
+    const newValue = Math.max(0, currentValue + amount);
+    input.value = newValue;
 }
 
 // Initialize the pharmacy management system

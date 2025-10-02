@@ -113,6 +113,26 @@
                     <h1>VivaLife Pharmacy</h1>
                 </div>
                 <div class="user-info">
+                    <div class="notifications-container">
+                        <button id="notifications-btn" class="notifications-btn">
+                            <i class="fas fa-bell"></i>
+                            <span id="notifications-badge" class="notifications-badge" style="display: none;">0</span>
+                        </button>
+                        <div id="notifications-dropdown" class="notifications-dropdown" style="display: none;">
+                            <div class="notifications-header">
+                                <h3>Notifications</h3>
+                                <button id="mark-all-read" class="btn-link">Mark all as read</button>
+                            </div>
+                            <div class="notifications-content">
+                                <div id="notifications-list" class="notifications-list">
+                                    <div class="no-notifications">
+                                        <i class="fas fa-bell-slash"></i>
+                                        <p>No new notifications</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <span id="current-user">Welcome, Staff</span>
                     <button id="logout-btn" class="btn btn-outline">Logout</button>
                 </div>
@@ -129,6 +149,10 @@
                 <li class="nav-item" data-section="inventory">
                     <i class="fas fa-boxes"></i>
                     <span>Inventory</span>
+                </li>
+                <li class="nav-item" data-section="inventory-count">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Inventory Count</span>
                 </li>
                 <li class="nav-item" data-section="dispensing">
                     <i class="fas fa-prescription-bottle-alt"></i>
@@ -299,9 +323,14 @@
             <section id="inventory" class="content-section">
                 <div class="section-header">
                     <h2>Inventory Management</h2>
-                    <button id="add-product-btn" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Product
-                    </button>
+                    <div class="header-actions">
+                        <button id="stock-transfer-btn" class="btn btn-info">
+                            <i class="fas fa-exchange-alt"></i> Stock Transfer
+                        </button>
+                        <button id="add-product-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Product
+                        </button>
+                    </div>
                 </div>
 
                 <div class="inventory-controls">
@@ -352,6 +381,296 @@
                             <!-- Inventory items will be populated here -->
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <!-- Inventory Count Section -->
+            <section id="inventory-count" class="content-section">
+                <div class="section-header">
+                    <h2>Inventory Count</h2>
+                    <p>Perform physical inventory counts and reconcile with system records</p>
+                    <div class="header-actions">
+                        <button id="start-new-count-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Start New Count
+                        </button>
+                        <button id="view-count-history-btn" class="btn btn-outline">
+                            <i class="fas fa-history"></i> Count History
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Count Status Overview -->
+                <div class="count-overview">
+                    <div class="count-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="active-counts">0</h3>
+                                <p>Active Counts</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="completed-counts">0</h3>
+                                <p>Completed Today</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="discrepancies-found">0</h3>
+                                <p>Discrepancies Found</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="adjustments-needed">0</h3>
+                                <p>Adjustments Needed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Count Session -->
+                <div id="active-count-session" class="active-count-session" style="display: none;">
+                    <div class="count-session-header">
+                        <h3>Active Count Session</h3>
+                        <div class="session-info">
+                            <span id="session-id">Count #12345</span>
+                            <span id="session-date">Started: 02/10/2024 10:30 AM</span>
+                            <span id="session-counter">Counter: Ahmed Al-Reesh</span>
+                        </div>
+                        <div class="session-actions">
+                            <button id="pause-count-btn" class="btn btn-warning">
+                                <i class="fas fa-pause"></i> Pause Count
+                            </button>
+                            <button id="complete-count-btn" class="btn btn-success">
+                                <i class="fas fa-check"></i> Complete Count
+                            </button>
+                            <button id="cancel-count-btn" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Cancel Count
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Count Progress -->
+                    <div class="count-progress">
+                        <div class="progress-info">
+                            <span>Progress: <span id="count-progress-text">0 of 0 items counted</span></span>
+                            <span id="count-percentage">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="count-progress-fill" class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Product Search and Count Input -->
+                    <div class="count-input-section">
+                        <div class="count-search">
+                            <div class="search-methods">
+                                <div class="search-method active" data-method="barcode">
+                                    <i class="fas fa-barcode"></i>
+                                    <span>Scan Barcode</span>
+                                </div>
+                                <div class="search-method" data-method="search">
+                                    <i class="fas fa-search"></i>
+                                    <span>Search Product</span>
+                                </div>
+                                <div class="search-method" data-method="browse">
+                                    <i class="fas fa-list"></i>
+                                    <span>Browse List</span>
+                                </div>
+                            </div>
+                            
+                            <div class="input-section">
+                                <div id="barcode-input-section" class="input-method active">
+                                    <div class="barcode-scanner">
+                                        <i class="fas fa-barcode"></i>
+                                        <input type="text" id="count-barcode-input" placeholder="Scan or enter barcode/SKU">
+                                        <button id="count-scan-btn" class="btn btn-primary">Scan</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="search-input-section" class="input-method">
+                                    <div class="product-search">
+                                        <input type="text" id="count-product-search" placeholder="Search product name...">
+                                        <div id="count-product-suggestions" class="suggestions"></div>
+                                    </div>
+                                </div>
+                                
+                                <div id="browse-input-section" class="input-method">
+                                    <div class="category-filter">
+                                        <select id="count-category-filter">
+                                            <option value="">All Categories</option>
+                                            <option value="medicines">Medicines</option>
+                                            <option value="cosmetics">Cosmetics</option>
+                                            <option value="diaber">Diaber</option>
+                                            <option value="milk">Milk</option>
+                                            <option value="refrigerated">Refrigerated Items</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Product for Counting -->
+                        <div id="selected-product-count" class="selected-product-count" style="display: none;">
+                            <div class="product-info">
+                                <div class="product-details">
+                                    <h4 id="selected-product-name">Product Name</h4>
+                                    <p><strong>SKU:</strong> <span id="selected-product-sku">SKU123</span></p>
+                                    <p><strong>Category:</strong> <span id="selected-product-category">Medicines</span></p>
+                                    <p><strong>System Stock:</strong> <span id="selected-product-system-stock">0</span></p>
+                                    <p><strong>Last Count:</strong> <span id="selected-product-last-count">Never</span></p>
+                                </div>
+                                <div class="count-input">
+                                    <label for="physical-count-input">Physical Count:</label>
+                                    <div class="count-controls">
+                                        <button class="count-btn decrease" onclick="adjustCount(-1)">-</button>
+                                        <input type="number" id="physical-count-input" min="0" placeholder="0" value="0">
+                                        <button class="count-btn increase" onclick="adjustCount(1)">+</button>
+                                    </div>
+                                    <div class="count-actions">
+                                        <button id="save-count-btn" class="btn btn-success">
+                                            <i class="fas fa-save"></i> Save Count
+                                        </button>
+                                        <button id="skip-item-btn" class="btn btn-secondary">
+                                            <i class="fas fa-forward"></i> Skip Item
+                                        </button>
+                                        <button id="clear-selection-btn" class="btn btn-outline">
+                                            <i class="fas fa-times"></i> Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Discrepancy Alert -->
+                            <div id="discrepancy-alert" class="discrepancy-alert" style="display: none;">
+                                <div class="alert-content">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div class="alert-text">
+                                        <h5>Discrepancy Detected</h5>
+                                        <p>Physical count differs from system stock. Please verify the count.</p>
+                                        <p><strong>Difference:</strong> <span id="discrepancy-amount">0</span></p>
+                                    </div>
+                                    <div class="alert-actions">
+                                        <button id="confirm-count-btn" class="btn btn-warning">Confirm Count</button>
+                                        <button id="recount-btn" class="btn btn-outline">Recount</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Count History and Browse Mode -->
+                <div id="count-browse-mode" class="count-browse-mode">
+                    <div class="browse-controls">
+                        <div class="filter-controls">
+                            <select id="browse-status-filter">
+                                <option value="">All Items</option>
+                                <option value="counted">Counted</option>
+                                <option value="not-counted">Not Counted</option>
+                                <option value="discrepancy">With Discrepancy</option>
+                            </select>
+                            <select id="browse-category-filter">
+                                <option value="">All Categories</option>
+                                <option value="medicines">Medicines</option>
+                                <option value="cosmetics">Cosmetics</option>
+                                <option value="diaber">Diaber</option>
+                                <option value="milk">Milk</option>
+                                <option value="refrigerated">Refrigerated Items</option>
+                            </select>
+                            <input type="text" id="browse-search" placeholder="Search products...">
+                        </div>
+                    </div>
+
+                    <div class="count-items-table-container">
+                        <table class="count-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Category</th>
+                                    <th>System Stock</th>
+                                    <th>Physical Count</th>
+                                    <th>Difference</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="count-items-table-body">
+                                <!-- Count items will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Count Summary and Reconciliation -->
+                <div id="count-summary" class="count-summary" style="display: none;">
+                    <h3>Count Summary & Reconciliation</h3>
+                    
+                    <div class="summary-stats">
+                        <div class="summary-card">
+                            <h4>Items Counted</h4>
+                            <span id="summary-items-counted">0</span>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Discrepancies</h4>
+                            <span id="summary-discrepancies">0</span>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Total Adjustment Value</h4>
+                            <span id="summary-adjustment-value">ر.س0.00</span>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Accuracy Rate</h4>
+                            <span id="summary-accuracy-rate">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="discrepancies-list">
+                        <h4>Items Requiring Adjustment</h4>
+                        <div id="discrepancies-table-container">
+                            <table class="discrepancies-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>System Stock</th>
+                                        <th>Physical Count</th>
+                                        <th>Difference</th>
+                                        <th>Value Impact</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="discrepancies-table-body">
+                                    <!-- Discrepancies will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="reconciliation-actions">
+                        <button id="apply-adjustments-btn" class="btn btn-primary">
+                            <i class="fas fa-balance-scale"></i> Apply All Adjustments
+                        </button>
+                        <button id="export-count-report-btn" class="btn btn-outline">
+                            <i class="fas fa-download"></i> Export Report
+                        </button>
+                        <button id="save-count-session-btn" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Count Session
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -1237,6 +1556,11 @@
                         <h3>Product Expiry Report</h3>
                         <p>Track products approaching expiration dates and manage inventory</p>
                         <button class="btn btn-primary" id="generate-expiry-report">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Stock Transfer Report</h3>
+                        <p>Track stock transfers between pharmacies and analyze movement patterns</p>
+                        <button class="btn btn-primary" id="generate-stock-transfer-report">Generate Report</button>
                     </div>
                 </div>
 
@@ -3378,6 +3702,120 @@
             <button type="button" class="btn btn-danger btn-sm remove-medication">
                 <i class="fas fa-trash"></i> Remove
             </button>
+        </div>
+    </div>
+
+    <!-- Stock Transfer Modal -->
+    <div id="stock-transfer-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Stock Transfer Between Pharmacies</h3>
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="stock-transfer-form">
+                    <div class="transfer-header">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transfer-from-pharmacy">From Pharmacy *</label>
+                                <select id="transfer-from-pharmacy" class="form-control" required>
+                                    <option value="">Select Source Pharmacy</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transfer-to-pharmacy">To Pharmacy *</label>
+                                <select id="transfer-to-pharmacy" class="form-control" required>
+                                    <option value="">Select Destination Pharmacy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="transfer-reason">Transfer Reason</label>
+                            <select id="transfer-reason" class="form-control">
+                                <option value="">Select Reason</option>
+                                <option value="stock-shortage">Stock Shortage</option>
+                                <option value="excess-stock">Excess Stock</option>
+                                <option value="expiry-management">Expiry Management</option>
+                                <option value="branch-opening">New Branch Opening</option>
+                                <option value="emergency-request">Emergency Request</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="transfer-notes">Transfer Notes</label>
+                            <textarea id="transfer-notes" class="form-control" rows="2" placeholder="Additional notes about this transfer..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="transfer-products">
+                        <h4>Products to Transfer</h4>
+                        <div class="product-search-section">
+                            <div class="form-group">
+                                <label for="product-search-transfer">Search Product</label>
+                                <div class="autocomplete-container">
+                                    <input type="text" id="product-search-transfer" class="form-control" placeholder="Type product name or SKU..." autocomplete="off">
+                                    <div id="product-suggestions-transfer" class="autocomplete-suggestions" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="transfer-items-list" id="transfer-items-list">
+                            <!-- Transfer items will be added here -->
+                        </div>
+                        
+                        <div class="no-items-message" id="no-transfer-items" style="display: block;">
+                            <i class="fas fa-box-open"></i>
+                            <p>No products selected for transfer. Search and select products above.</p>
+                        </div>
+                    </div>
+
+                    <div class="transfer-summary" id="transfer-summary" style="display: none;">
+                        <h4>Transfer Summary</h4>
+                        <div class="summary-info">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Items:</span>
+                                <span class="summary-value" id="total-transfer-items">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Total Quantity:</span>
+                                <span class="summary-value" id="total-transfer-quantity">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Estimated Value:</span>
+                                <span class="summary-value" id="total-transfer-value">ر.س0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-primary" id="execute-transfer-btn" disabled>Execute Transfer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Item Template -->
+    <div id="transfer-item-template" style="display: none;">
+        <div class="transfer-item">
+            <div class="item-info">
+                <div class="item-name"></div>
+                <div class="item-details">
+                    <span class="item-sku"></span>
+                    <span class="item-current-stock"></span>
+                </div>
+            </div>
+            <div class="item-transfer">
+                <div class="quantity-input">
+                    <label>Quantity to Transfer:</label>
+                    <input type="number" class="form-control transfer-quantity" min="1" placeholder="0">
+                </div>
+                <div class="item-actions">
+                    <button type="button" class="btn btn-danger btn-sm remove-transfer-item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
